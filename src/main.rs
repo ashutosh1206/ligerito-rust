@@ -59,8 +59,15 @@ impl BinaryElem16 {
         return result;
     }
 
-    fn inverse(&self) -> Self {
-        self.pow(65534)
+    fn inverse(&self) -> Result<Self, &'static str> {
+        if self.value == 0 {
+            Err("Cannot compute inverse of zero in GF(2^16)")
+        } else {
+            // By Fermat's little theorem we have: self^{p-1} = 1 (mod p)
+            // Hence we have: self^{-1} = self^{2^16-2}
+            // TODO: see if there are faster alternatives to computing inverses
+            Ok(self.pow(65534))
+        }
     }
 }
 
@@ -89,7 +96,7 @@ impl Div for BinaryElem16 {
     type Output = BinaryElem16;
 
     fn div(self, other: BinaryElem16) -> Self::Output {
-        return self * other.inverse();
+        return self * other.inverse().expect("Cannot divide by zero");
     }
 }
 
