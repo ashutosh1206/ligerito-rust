@@ -100,6 +100,128 @@ impl Div for BinaryElem16 {
     }
 }
 
+impl PartialEq for BinaryElem16 {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::u16;
+
+    use crate::BinaryElem16;
+    use rand;
+
+    const ONE: BinaryElem16 = BinaryElem16 { value: 1 };
+    const ZERO: BinaryElem16 = BinaryElem16 { value: 0 };
+    const MAX_VAL: BinaryElem16 = BinaryElem16 { value: u16::MAX };
+
+    #[test]
+    fn test_add() {
+        let random1 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        let random2 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        let random3 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+
+        assert_eq!(ONE + ONE, ZERO);
+        assert_eq!(random1 + ZERO, random1);
+        // Ensure no overflows when adding in GF(2^16)
+        assert_eq!(
+            MAX_VAL + ONE,
+            BinaryElem16 {
+                value: u16::MAX - 1
+            }
+        );
+        // Commutative property
+        assert_eq!(random1 + random2, random2 + random1);
+        // Associative property
+        assert_eq!(random1 + (random2 + random3), (random1 + random2) + random3);
+    }
+
+    #[test]
+    fn test_mul() {
+        let random1 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        let random2 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        let random3 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+
+        assert_eq!(ZERO * ZERO, ZERO);
+        assert_eq!(random1 * ZERO, ZERO);
+        assert_eq!(ONE * ONE, ONE);
+        assert_eq!(random1 * ONE, random1);
+        assert_eq!(MAX_VAL * MAX_VAL, BinaryElem16 { value: 0x5419 });
+
+        // Commutative property
+        assert_eq!(random1 * random2, random2 * random1);
+        // Associative property
+        assert_eq!(random1 * (random2 * random3), (random1 * random2) * random3);
+    }
+
+    #[test]
+    fn test_inverse() {
+        assert_eq!(ONE.inverse().unwrap(), ONE);
+
+        let result = ZERO.inverse();
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Cannot compute inverse of zero in GF(2^16)"
+        );
+
+        assert_eq!(
+            BinaryElem16 { value: 15000 }.inverse().unwrap(),
+            BinaryElem16 { value: 0xc3a0 }
+        );
+
+        let random = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        assert_eq!(random * random.inverse().unwrap(), ONE);
+    }
+
+    #[test]
+    fn test_div() {
+        let random1 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+
+        assert_eq!(random1 / ONE, random1);
+
+        let panic_result = std::panic::catch_unwind(|| random1 / ZERO);
+        assert!(panic_result.is_err(), "Division by 0 should have panicked");
+    }
+
+    #[test]
+    fn test_ops_combination() {
+        let random1 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        let random2 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+        let random3 = BinaryElem16 {
+            value: rand::random::<u16>(),
+        };
+
+        // Distributive property
+        assert_eq!(
+            random1 * (random2 + random3),
+            (random1 * random2) + (random1 * random3)
+        );
+    }
+}
+
 fn main() {
     println!("Hello, world!");
     let a = BinaryElem16 { value: 15000 };
