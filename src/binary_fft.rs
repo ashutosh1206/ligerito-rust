@@ -1,5 +1,5 @@
 use crate::binary_field::{BinaryElem16, BinaryElem32, BinaryField};
-use std::ops::Add;
+use std::{fmt::write, ops::Add};
 
 pub fn fft<F>(v: &mut [F], twiddles: &[F]) {
     // TODO: Implement
@@ -17,11 +17,16 @@ where
     let beta = beta.unwrap_or_else(|| F::zero());
 
     let mut twiddles = vec![F::zero(); (1 << log_n) - 1];
-    let layer_size = 1 << (log_n - 1);
+    let mut layer_size = 1 << (log_n - 1);
     let mut layer = vec![F::zero(); layer_size];
-    let write_at = layer_size;
-
+    let mut write_at = layer_size;
     let s_prev_at_root = layer_0(&mut layer, beta, log_n);
+    twiddles[(write_at - 1)..].copy_from_slice(&layer);
+
+    for _ in 0..(log_n - 1) {
+        write_at >>= 1;
+        layer_size = write_at;
+    }
 
     // TODO: Implement the rest
     twiddles
@@ -39,6 +44,8 @@ where
     }
     F::new(F::ValueType::from(1))
 }
+
+fn layer_i<F>(layer: &mut Vec<F>, layer_size: usize, s_prev_at_root: F) {}
 
 // Internal implementation (private)
 fn fft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: usize) {
