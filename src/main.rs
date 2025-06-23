@@ -1,4 +1,4 @@
-use cryptoutils::*;
+use cryptoutils::BinaryElem16;
 
 fn main() {
     println!("Hello, world!");

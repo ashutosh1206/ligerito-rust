@@ -1,5 +1,11 @@
 use std::ops::{Add, Div, Mul};
 
+pub trait BinaryField {
+    type ValueType;
+    fn zero() -> Self;
+    fn new(value: Self::ValueType) -> Self;
+}
+
 macro_rules! define_galois_field {
     ($struct_name: ident, $value_type: ty, $double_type: ty, $irreducible:expr, $max_exp:expr) => {
         #[derive(Debug, Clone, Copy)]
@@ -106,6 +112,18 @@ macro_rules! define_galois_field {
                 let reduced = Self::mod_irreducible(result);
 
                 Self { value: reduced }
+            }
+        }
+
+        impl BinaryField for $struct_name {
+            type ValueType = $value_type;
+            
+            fn zero() -> Self {
+                Self { value: 0 }
+            }
+            
+            fn new(value: Self::ValueType) -> Self {
+                Self { value }
             }
         }
     };
@@ -239,4 +257,3 @@ mod tests {
     test_galois_field!(BinaryElem16, u16, binary_elem_16);
     test_galois_field!(BinaryElem32, u32, binary_elem_32);
 }
-
