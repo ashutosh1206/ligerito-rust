@@ -4,6 +4,7 @@ pub trait BinaryField {
     type ValueType;
     fn zero() -> Self;
     fn new(value: Self::ValueType) -> Self;
+    fn inverse(&self) -> Result<Self, &'static str>;
 }
 
 macro_rules! define_galois_field {
@@ -124,6 +125,10 @@ macro_rules! define_galois_field {
 
             fn new(value: Self::ValueType) -> Self {
                 Self { value }
+            }
+
+            fn inverse(&self) -> Result<Self, &'static str> {
+                self.inverse()
             }
         }
     };
