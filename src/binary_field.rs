@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Mul};
 
-pub trait BinaryField {
+pub trait BinaryField: Sized {
     type ValueType;
     fn zero() -> Self;
     fn new(value: Self::ValueType) -> Self;

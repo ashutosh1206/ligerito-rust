@@ -1,8 +1,5 @@
 use crate::binary_field::{BinaryElem16, BinaryElem32, BinaryField};
-use std::{
-    fmt::write,
-    ops::{Add, Mul},
-};
+use std::ops::{Add, Mul};
 
 pub fn fft<F>(v: &mut [F], twiddles: &[F]) {
     // TODO: Implement
@@ -15,7 +12,8 @@ pub fn ifft<F>(v: &mut [F], twiddles: &[F]) {
 pub fn compute_twiddles<F>(log_n: usize, beta: Option<F>) -> Vec<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: From<usize>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     let beta = beta.unwrap_or_else(|| F::zero());
 
@@ -32,30 +30,34 @@ where
 
         s_prev_at_root = layer_i(&mut layer, layer_size, s_prev_at_root);
         let s_inv = s_prev_at_root.inverse().unwrap();
-        // twiddles[(write_at-1):] =
+
+        for i in 0..layer_size {
+            twiddles[write_at + i - 1] = s_inv * layer[i];
+        }
     }
 
-    // TODO: Implement the rest
     twiddles
 }
 
 fn layer_0<F>(layer: &mut Vec<F>, beta: F, k: usize) -> F
 where
     F: Copy + BinaryField + Add<Output = F>,
-    F::ValueType: From<usize>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     for i in 0usize..(1 << (k - 1)) {
         let mut l0i = beta;
-        l0i = l0i + F::new(F::ValueType::from(i << 1));
+        l0i = l0i + F::new(F::ValueType::try_from(i << 1).unwrap());
         layer[i] = l0i;
     }
-    F::new(F::ValueType::from(1))
+    F::new(F::ValueType::try_from(1).unwrap())
 }
 
 fn layer_i<F>(layer: &mut Vec<F>, layer_size: usize, s_prev_at_root: F) -> F
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: From<usize>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     let prev_layer_size = layer_size * 2;
     let s_at_root = compute_s_at_root(layer, s_prev_at_root);
@@ -71,7 +73,8 @@ where
 fn compute_s_at_root<F>(prev_layer: &Vec<F>, s_prev_at_root: F) -> F
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: From<usize>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     next_s(prev_layer[1] + prev_layer[0], s_prev_at_root)
 }
@@ -79,7 +82,8 @@ where
 fn next_s<F>(s_prev: F, s_prev_at_root: F) -> F
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: From<usize>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     s_prev * s_prev + s_prev_at_root * s_prev
 }
@@ -125,7 +129,27 @@ pub fn compute_pis<F>(pis_len: usize, sks_vks: &[F]) -> Vec<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::binary_field::BinaryElem16;
 
     #[test]
-    fn test_basic_fft() {}
+    fn test_compute_twiddles_matches_julia() {
+        let twiddles = compute_twiddles::<BinaryElem16>(10, None);
+
+        // Expected values from Julia: compute_twiddles(BinaryElem16, 10)
+        let expected_start = [0x0000, 0x0000, 0x6ba9, 0x0000, 0x6a23];
+
+        println!("Rust twiddles length: {}", twiddles.len());
+        println!("First 5 twiddles:");
+        for (i, &t) in twiddles.iter().take(5).enumerate() {
+            println!("  {}: 0x{:04x}", i + 1, t.value);
+        }
+
+        // Check length matches Julia (2^10 - 1 = 1023)
+        assert_eq!(twiddles.len(), 1023);
+
+        // Check first few values match
+        for (i, &expected) in expected_start.iter().enumerate() {
+            assert_eq!(twiddles[i].value, expected, "Mismatch at index {}", i);
+        }
+    }
 }
