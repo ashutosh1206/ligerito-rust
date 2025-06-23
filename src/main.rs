@@ -1,225 +1,243 @@
 use std::ops::{Add, Div, Mul};
 
-// x^16 + x^5 + x^3 + x^2 + 1
-const IRREDUCIBLE: u32 = 65581;
-
-#[derive(Debug, Clone, Copy)]
-struct BinaryElem16 {
-    value: u16,
-}
-
-fn mod_irreducible(a: u32) -> u16 {
-    let field_size: u32 = 16;
-    let mut result = a;
-
-    for i in (field_size..32).rev() {
-        if result & (1 << i) != 0 {
-            result ^= IRREDUCIBLE << (i - field_size);
-        }
-    }
-
-    result as u16
-}
-
-fn poly_multiply_gf2_u16(a: u16, b: u16) -> u32 {
-    let mut result: u32 = 0;
-
-    // Karatsuba multiplication algorithm,
-    // except that we use XOR instead of addition
-    let mut tempa = a as u32;
-    let mut tempb = b as u32;
-    while tempb != 0 {
-        if tempb & 1 != 0 {
-            result ^= tempa;
-        }
-        tempa <<= 1;
-        tempb >>= 1;
-    }
-
-    result
-}
-
-impl BinaryElem16 {
-    fn pow(&self, mut exponent: u16) -> Self {
-        if exponent == 0 {
-            return Self { value: 1 };
+macro_rules! define_galois_field {
+    ($struct_name: ident, $value_type: ty, $double_type: ty, $irreducible:expr, $max_exp:expr) => {
+        #[derive(Debug, Clone, Copy)]
+        struct $struct_name {
+            value: $value_type,
         }
 
-        let mut result = Self { value: 1 };
-        let mut base = self.clone();
+        impl $struct_name {
+            fn pow(&self, mut exponent: $value_type) -> Self {
+                if exponent == 0 {
+                    return Self { value: 1 };
+                }
 
-        while exponent > 0 {
-            if exponent & 1 == 1 {
-                result = result * base;
+                let mut result = Self { value: 1 };
+                let mut base = self.clone();
+
+                while exponent > 0 {
+                    if exponent & 1 == 1 {
+                        result = result * base;
+                    }
+                    base = base * base;
+                    exponent >>= 1;
+                }
+
+                return result;
             }
-            base = base * base;
-            exponent >>= 1;
+
+            fn inverse(&self) -> Result<Self, &'static str> {
+                if self.value == 0 {
+                    Err("Cannot compute inverse of zero")
+                } else {
+                    // By Fermat's little theorem we have: self^{p-1} = 1 (mod p)
+                    // Which gives us: self^{-1} = self^{2^16-2} for BinaryElem16, for example
+                    // TODO: see if there are faster alternatives to computing inverses
+                    // max_exp is 65534 for BinaryElem16
+                    Ok(self.pow($max_exp))
+                }
+            }
+
+            fn mod_irreducible(a: $double_type) -> $value_type {
+                let field_size_bits = std::mem::size_of::<$value_type>() * 8;
+                let field_size_double_bits = std::mem::size_of::<$double_type>() * 8;
+
+                let mut result = a;
+                let irreducible = $irreducible as $double_type;
+
+                for i in (field_size_bits..field_size_double_bits).rev() {
+                    if result & (1 << i) != 0 {
+                        result ^= irreducible << (i - field_size_bits);
+                    }
+                }
+
+                result as $value_type
+            }
+
+            fn poly_multiply_gf2(a: $value_type, b: $value_type) -> $double_type {
+                let mut result: $double_type = 0;
+
+                // Karatsuba multiplication algorithm,
+                // except that we use XOR instead of addition
+                let mut tempa = a as $double_type;
+                let mut tempb = b as $double_type;
+                while tempb != 0 {
+                    if tempb & 1 != 0 {
+                        result ^= tempa;
+                    }
+                    tempa <<= 1;
+                    tempb >>= 1;
+                }
+
+                result
+            }
         }
 
-        return result;
-    }
+        impl Add for $struct_name {
+            type Output = Self;
 
-    fn inverse(&self) -> Result<Self, &'static str> {
-        if self.value == 0 {
-            Err("Cannot compute inverse of zero in GF(2^16)")
-        } else {
-            // By Fermat's little theorem we have: self^{p-1} = 1 (mod p)
-            // Hence we have: self^{-1} = self^{2^16-2}
-            // TODO: see if there are faster alternatives to computing inverses
-            Ok(self.pow(65534))
+            fn add(self, other: Self) -> Self::Output {
+                Self {
+                    value: self.value ^ other.value,
+                }
+            }
         }
-    }
-}
 
-impl Add for BinaryElem16 {
-    type Output = BinaryElem16;
-
-    fn add(self, other: BinaryElem16) -> Self::Output {
-        BinaryElem16 {
-            value: self.value ^ other.value,
+        impl PartialEq for $struct_name {
+            fn eq(&self, other: &Self) -> bool {
+                self.value == other.value
+            }
         }
-    }
+
+        impl Div for $struct_name {
+            type Output = Self;
+
+            fn div(self, other: Self) -> Self::Output {
+                return self * other.inverse().expect("Cannot divide by zero");
+            }
+        }
+
+        impl Mul for $struct_name {
+            type Output = Self;
+
+            fn mul(self, other: Self) -> Self::Output {
+                let result = Self::poly_multiply_gf2(self.value, other.value);
+                let reduced = Self::mod_irreducible(result);
+
+                Self { value: reduced }
+            }
+        }
+    };
 }
 
-impl Mul for BinaryElem16 {
-    type Output = BinaryElem16;
-
-    fn mul(self, other: BinaryElem16) -> Self::Output {
-        let result = poly_multiply_gf2_u16(self.value, other.value);
-        let reduced = mod_irreducible(result);
-
-        BinaryElem16 { value: reduced }
-    }
-}
-
-impl Div for BinaryElem16 {
-    type Output = BinaryElem16;
-
-    fn div(self, other: BinaryElem16) -> Self::Output {
-        return self * other.inverse().expect("Cannot divide by zero");
-    }
-}
-
-impl PartialEq for BinaryElem16 {
-    fn eq(&self, other: &Self) -> bool {
-        self.value == other.value
-    }
-}
+// irreducible polynomial: x^16 + x^5 + x^3 + x^2 + 1
+// max_exp: 2^16-2
+define_galois_field!(BinaryElem16, u16, u32, 0x1002D, 65534);
+// irreducible polynomial: a^32 + a^15 + a^9 + a^7 + x^4 + x^3 + 1
+// max_exp: 2^32-2
+define_galois_field!(BinaryElem32, u32, u64, 0x100008299, 4294967294);
 
 #[cfg(test)]
 mod tests {
-    use std::u16;
+    use super::*;
+    /// Macro to generate comprehensive tests for all field sizes
+    macro_rules! test_galois_field {
+        ($field_type:ty, $value_type:ty, $test_suffix:ident) => {
+            paste::paste! {
+                #[test]
+                fn [<test_add_ $test_suffix>]() {
+                    const ONE: $field_type = $field_type { value: 1 };
+                    const ZERO: $field_type = $field_type { value: 0 };
+                    const MAX_VAL: $field_type = $field_type { value: $value_type::MAX };
 
-    use crate::BinaryElem16;
-    use rand;
+                    let random1 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    let random2 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    let random3 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
 
-    const ONE: BinaryElem16 = BinaryElem16 { value: 1 };
-    const ZERO: BinaryElem16 = BinaryElem16 { value: 0 };
-    const MAX_VAL: BinaryElem16 = BinaryElem16 { value: u16::MAX };
+                    assert_eq!(ONE + ONE, ZERO);
+                    assert_eq!(random1 + ZERO, random1);
+                    // Ensure no overflows when adding in GF(2^16)
+                    assert_eq!(
+                        MAX_VAL + ONE,
+                        $field_type {
+                            value: $value_type::MAX - 1
+                        }
+                    );
+                    // Commutative property
+                    assert_eq!(random1 + random2, random2 + random1);
+                    // Associative property
+                    assert_eq!(random1 + (random2 + random3), (random1 + random2) + random3);
+                }
 
-    #[test]
-    fn test_add() {
-        let random1 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        let random2 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        let random3 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
+                #[test]
+                fn [<test_mul_ $test_suffix>]() {
+                    const ONE: $field_type = $field_type { value: 1 };
+                    const ZERO: $field_type = $field_type { value: 0 };
 
-        assert_eq!(ONE + ONE, ZERO);
-        assert_eq!(random1 + ZERO, random1);
-        // Ensure no overflows when adding in GF(2^16)
-        assert_eq!(
-            MAX_VAL + ONE,
-            BinaryElem16 {
-                value: u16::MAX - 1
+                    let random1 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    let random2 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    let random3 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+
+                    assert_eq!(ZERO * ZERO, ZERO);
+                    assert_eq!(random1 * ZERO, ZERO);
+                    assert_eq!(ONE * ONE, ONE);
+                    assert_eq!(random1 * ONE, random1);
+
+                    // Commutative property
+                    assert_eq!(random1 * random2, random2 * random1);
+                    // Associative property
+                    assert_eq!(random1 * (random2 * random3), (random1 * random2) * random3);
+                }
+
+                #[test]
+                fn [<test_inverse_ $test_suffix>]() {
+                    const ONE: $field_type = $field_type { value: 1 };
+                    const ZERO: $field_type = $field_type { value: 0 };
+                    assert_eq!(ONE.inverse().unwrap(), ONE);
+
+                    let result = ZERO.inverse();
+                    assert!(result.is_err());
+                    assert_eq!(
+                        result.unwrap_err(),
+                        "Cannot compute inverse of zero"
+                    );
+
+                    let random = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    assert_eq!(random * random.inverse().unwrap(), ONE);
+                }
+
+                #[test]
+                fn [<test_div_ $test_suffix>]() {
+                    const ONE: $field_type = $field_type { value: 1 };
+                    const ZERO: $field_type = $field_type { value: 0 };
+                    let random1 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+
+                    assert_eq!(random1 / ONE, random1);
+
+                    let panic_result = std::panic::catch_unwind(|| random1 / ZERO);
+                    assert!(panic_result.is_err(), "Division by 0 should have panicked");
+                }
+
+                #[test]
+                fn [<test_ops_combination_ $test_suffix>]() {
+                    let random1 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    let random2 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+                    let random3 = $field_type {
+                        value: rand::random::<$value_type>(),
+                    };
+
+                    // Distributive property
+                    assert_eq!(
+                        random1 * (random2 + random3),
+                        (random1 * random2) + (random1 * random3)
+                    );
+                }
             }
-        );
-        // Commutative property
-        assert_eq!(random1 + random2, random2 + random1);
-        // Associative property
-        assert_eq!(random1 + (random2 + random3), (random1 + random2) + random3);
+        };
     }
-
-    #[test]
-    fn test_mul() {
-        let random1 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        let random2 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        let random3 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-
-        assert_eq!(ZERO * ZERO, ZERO);
-        assert_eq!(random1 * ZERO, ZERO);
-        assert_eq!(ONE * ONE, ONE);
-        assert_eq!(random1 * ONE, random1);
-        assert_eq!(MAX_VAL * MAX_VAL, BinaryElem16 { value: 0x5419 });
-
-        // Commutative property
-        assert_eq!(random1 * random2, random2 * random1);
-        // Associative property
-        assert_eq!(random1 * (random2 * random3), (random1 * random2) * random3);
-    }
-
-    #[test]
-    fn test_inverse() {
-        assert_eq!(ONE.inverse().unwrap(), ONE);
-
-        let result = ZERO.inverse();
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err(),
-            "Cannot compute inverse of zero in GF(2^16)"
-        );
-
-        assert_eq!(
-            BinaryElem16 { value: 15000 }.inverse().unwrap(),
-            BinaryElem16 { value: 0xc3a0 }
-        );
-
-        let random = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        assert_eq!(random * random.inverse().unwrap(), ONE);
-    }
-
-    #[test]
-    fn test_div() {
-        let random1 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-
-        assert_eq!(random1 / ONE, random1);
-
-        let panic_result = std::panic::catch_unwind(|| random1 / ZERO);
-        assert!(panic_result.is_err(), "Division by 0 should have panicked");
-    }
-
-    #[test]
-    fn test_ops_combination() {
-        let random1 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        let random2 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-        let random3 = BinaryElem16 {
-            value: rand::random::<u16>(),
-        };
-
-        // Distributive property
-        assert_eq!(
-            random1 * (random2 + random3),
-            (random1 * random2) + (random1 * random3)
-        );
-    }
+    test_galois_field!(BinaryElem16, u16, binary_elem_16);
+    test_galois_field!(BinaryElem32, u32, binary_elem_32);
 }
 
 fn main() {
