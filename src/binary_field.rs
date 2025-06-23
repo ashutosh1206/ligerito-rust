@@ -117,11 +117,11 @@ macro_rules! define_galois_field {
 
         impl BinaryField for $struct_name {
             type ValueType = $value_type;
-            
+
             fn zero() -> Self {
                 Self { value: 0 }
             }
-            
+
             fn new(value: Self::ValueType) -> Self {
                 Self { value }
             }
