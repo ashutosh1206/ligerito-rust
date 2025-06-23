@@ -11,7 +11,8 @@ pub fn ifft<F>(v: &mut [F], twiddles: &[F]) {
 
 pub fn compute_twiddles<F>(log_n: usize, beta: Option<F>) -> Vec<F>
 where
-    F: Copy + BinaryField,
+    F: Copy + BinaryField + Add<Output = F>,
+    F::ValueType: From<usize>,
 {
     let beta = beta.unwrap_or_else(|| F::zero());
 
@@ -20,16 +21,18 @@ where
     let mut layer = vec![F::zero(); layer_size];
     let write_at = layer_size;
 
+    let s_prev_at_root = layer_0(&mut layer, beta, log_n);
+
     // TODO: Implement the rest
     twiddles
 }
 
-fn layer_0<F>(mut layer: Vec<F>, beta: F, k: usize) -> F
+fn layer_0<F>(layer: &mut Vec<F>, beta: F, k: usize) -> F
 where
     F: Copy + BinaryField + Add<Output = F>,
     F::ValueType: From<usize>,
 {
-    for i in 0usize..(1<<(k-1)) {
+    for i in 0usize..(1 << (k - 1)) {
         let mut l0i = beta;
         l0i = l0i + F::new(F::ValueType::from(i << 1));
         layer[i] = l0i;
