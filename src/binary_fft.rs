@@ -29,10 +29,10 @@ where
     F: Copy + BinaryField + Add<Output = F>,
     F::ValueType: From<usize>,
 {
-    for i in 1usize..=(1<<(k-1)) {
+    for i in 0usize..(1<<(k-1)) {
         let mut l0i = beta;
-        l0i = l0i + F::new(F::ValueType::from((i-1) << 1));
-        layer[i-1] = l0i;
+        l0i = l0i + F::new(F::ValueType::from(i << 1));
+        layer[i] = l0i;
     }
     F::new(F::ValueType::from(1))
 }
