@@ -1,12 +1,26 @@
 use crate::binary_field::{BinaryElem16, BinaryElem32, BinaryField};
 use std::ops::{Add, Mul};
 
-pub fn fft<F>(v: &mut [F], twiddles: &[F]) {
-    // TODO: Implement
+pub fn fft<F>(v: &mut [F], twiddles: &[F])
+where
+    F: Copy + BinaryField + Add<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    assert!(is_power_of_2(v.len()));
+
+    fft_twiddles(v, twiddles, Some(1));
 }
 
-pub fn ifft<F>(v: &mut [F], twiddles: &[F]) {
-    // TODO: Implement
+pub fn ifft<F>(v: &mut [F], twiddles: &[F])
+where
+    F: Copy + BinaryField + Add<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    assert!(is_power_of_2(v.len()));
+
+    ifft_twiddles(v, twiddles, Some(1));
 }
 
 pub fn compute_twiddles<F>(log_n: usize, beta: Option<F>) -> Vec<F>
@@ -89,12 +103,41 @@ where
 }
 
 // Internal implementation (private)
-fn fft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: usize) {
-    // TODO: Implement
+fn fft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: Option<usize>)
+where
+    F: Copy + BinaryField + Add<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    if v.len() == 1 {
+        return;
+    }
+    let idx = idx.unwrap_or_else(|| 1);
+
+    fft_mul(v, twiddles[idx - 1]);
+    let (u, w) = split_half(v);
+
+    fft_twiddles(u, twiddles, Some(idx * 2));
+    fft_twiddles(w, twiddles, Some(idx * 2 + 1));
 }
 
-fn ifft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: usize) {
-    // TODO: Implement
+fn ifft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: Option<usize>)
+where
+    F: Copy + BinaryField + Add<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    if v.len() == 1 {
+        return;
+    }
+    let idx = idx.unwrap_or_else(|| 1);
+
+    let (u, w) = split_half(v);
+
+    ifft_twiddles(u, twiddles, Some(idx * 2));
+    ifft_twiddles(w, twiddles, Some(idx * 2 + 1));
+
+    ifft_mul(v, twiddles[idx - 1]);
 }
 
 fn fft_mul<F>(v: &mut [F], lambda: F) {
@@ -108,6 +151,10 @@ fn ifft_mul<F>(v: &mut [F], lambda: F) {
 fn split_half<F>(v: &mut [F]) -> (&mut [F], &mut [F]) {
     let mid = v.len() / 2;
     v.split_at_mut(mid)
+}
+
+fn is_power_of_2(n: usize) -> bool {
+    n != 0 && (n & (n - 1)) == 0
 }
 
 // Utilities (public)
