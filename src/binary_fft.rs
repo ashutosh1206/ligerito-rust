@@ -3,7 +3,7 @@ use std::ops::{Add, Mul};
 
 pub fn fft<F>(v: &mut [F], twiddles: &[F])
 where
-    F: Copy + BinaryField + Add<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -14,7 +14,7 @@ where
 
 pub fn ifft<F>(v: &mut [F], twiddles: &[F])
 where
-    F: Copy + BinaryField + Add<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -105,7 +105,7 @@ where
 // Internal implementation (private)
 fn fft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: Option<usize>)
 where
-    F: Copy + BinaryField + Add<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -123,7 +123,7 @@ where
 
 fn ifft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: Option<usize>)
 where
-    F: Copy + BinaryField + Add<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -140,12 +140,32 @@ where
     ifft_mul(v, twiddles[idx - 1]);
 }
 
-fn fft_mul<F>(v: &mut [F], lambda: F) {
-    // TODO: Implement
+fn fft_mul<F>(v: &mut [F], lambda: F)
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    let (u, w) = split_half(v);
+
+    for i in 0..u.len() {
+        u[i] = u[i] + lambda * w[i];
+        w[i] = w[i] + u[i];
+    }
 }
 
-fn ifft_mul<F>(v: &mut [F], lambda: F) {
-    // TODO: Implement
+fn ifft_mul<F>(v: &mut [F], lambda: F)
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    let (u, w) = split_half(v);
+
+    for i in 0..u.len() {
+        w[i] = w[i] + u[i];
+        u[i] = u[i] + lambda * w[i];
+    }
 }
 
 fn split_half<F>(v: &mut [F]) -> (&mut [F], &mut [F]) {
@@ -198,5 +218,34 @@ mod tests {
         for (i, &expected) in expected_start.iter().enumerate() {
             assert_eq!(twiddles[i].value, expected, "Mismatch at index {}", i);
         }
+    }
+
+    #[test]
+    fn test_fft_ifft_roundtrip() {
+        // Test that ifft(fft(v)) == v
+        let log_n = 4; // Small test: 2^4 = 16 elements
+        let twiddles = compute_twiddles::<BinaryElem16>(log_n, None);
+        
+        // Create a test vector with some values
+        let mut v = vec![
+            BinaryElem16::new(1), BinaryElem16::new(2), BinaryElem16::new(3), BinaryElem16::new(4),
+            BinaryElem16::new(5), BinaryElem16::new(6), BinaryElem16::new(7), BinaryElem16::new(8),
+            BinaryElem16::new(9), BinaryElem16::new(10), BinaryElem16::new(11), BinaryElem16::new(12),
+            BinaryElem16::new(13), BinaryElem16::new(14), BinaryElem16::new(15), BinaryElem16::new(16)
+        ];
+        let original = v.clone();
+        
+        println!("Original: {:?}", v.iter().map(|x| x.value).collect::<Vec<_>>());
+        
+        // Apply FFT
+        fft(&mut v, &twiddles);
+        println!("After FFT: {:?}", v.iter().map(|x| x.value).collect::<Vec<_>>());
+        
+        // Apply IFFT  
+        ifft(&mut v, &twiddles);
+        println!("After IFFT: {:?}", v.iter().map(|x| x.value).collect::<Vec<_>>());
+        
+        // Should get back original
+        assert_eq!(v, original, "FFT->IFFT should be identity transform");
     }
 }
