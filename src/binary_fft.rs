@@ -225,26 +225,47 @@ mod tests {
         // Test that ifft(fft(v)) == v
         let log_n = 4; // Small test: 2^4 = 16 elements
         let twiddles = compute_twiddles::<BinaryElem16>(log_n, None);
-        
+
         // Create a test vector with some values
         let mut v = vec![
-            BinaryElem16::new(1), BinaryElem16::new(2), BinaryElem16::new(3), BinaryElem16::new(4),
-            BinaryElem16::new(5), BinaryElem16::new(6), BinaryElem16::new(7), BinaryElem16::new(8),
-            BinaryElem16::new(9), BinaryElem16::new(10), BinaryElem16::new(11), BinaryElem16::new(12),
-            BinaryElem16::new(13), BinaryElem16::new(14), BinaryElem16::new(15), BinaryElem16::new(16)
+            BinaryElem16::new(1),
+            BinaryElem16::new(2),
+            BinaryElem16::new(3),
+            BinaryElem16::new(4),
+            BinaryElem16::new(5),
+            BinaryElem16::new(6),
+            BinaryElem16::new(7),
+            BinaryElem16::new(8),
+            BinaryElem16::new(9),
+            BinaryElem16::new(10),
+            BinaryElem16::new(11),
+            BinaryElem16::new(12),
+            BinaryElem16::new(13),
+            BinaryElem16::new(14),
+            BinaryElem16::new(15),
+            BinaryElem16::new(16),
         ];
         let original = v.clone();
-        
-        println!("Original: {:?}", v.iter().map(|x| x.value).collect::<Vec<_>>());
-        
+
+        println!(
+            "Original: {:?}",
+            v.iter().map(|x| x.value).collect::<Vec<_>>()
+        );
+
         // Apply FFT
         fft(&mut v, &twiddles);
-        println!("After FFT: {:?}", v.iter().map(|x| x.value).collect::<Vec<_>>());
-        
-        // Apply IFFT  
+        println!(
+            "After FFT: {:?}",
+            v.iter().map(|x| x.value).collect::<Vec<_>>()
+        );
+
+        // Apply IFFT
         ifft(&mut v, &twiddles);
-        println!("After IFFT: {:?}", v.iter().map(|x| x.value).collect::<Vec<_>>());
-        
+        println!(
+            "After IFFT: {:?}",
+            v.iter().map(|x| x.value).collect::<Vec<_>>()
+        );
+
         // Should get back original
         assert_eq!(v, original, "FFT->IFFT should be identity transform");
     }
