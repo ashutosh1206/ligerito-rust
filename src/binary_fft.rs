@@ -102,7 +102,6 @@ where
     s_prev * s_prev + s_prev_at_root * s_prev
 }
 
-// Internal implementation (private)
 fn fft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: Option<usize>)
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
@@ -177,7 +176,6 @@ fn is_power_of_2(n: usize) -> bool {
     n != 0 && (n & (n - 1)) == 0
 }
 
-// Utilities (public)
 pub fn eval_sk_at_vks<F>(n: usize) -> Vec<F> {
     // TODO: Implement
     Vec::new()
