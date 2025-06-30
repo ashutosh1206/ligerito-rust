@@ -3,6 +3,14 @@ name = "cryptoutils"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "cryptoutils"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cryptoutils"
+path = "src/main.rs"
+
 [dependencies]
 
 [dev-dependencies]
