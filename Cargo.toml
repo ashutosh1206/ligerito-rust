@@ -12,6 +12,7 @@ name = "cryptoutils"
 path = "src/main.rs"
 
 [dependencies]
+sha2 = "0.10.9"
 
 [dev-dependencies]
 paste = "1.0.15"

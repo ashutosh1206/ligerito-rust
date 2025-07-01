@@ -172,7 +172,7 @@ fn split_half<F>(v: &mut [F]) -> (&mut [F], &mut [F]) {
     v.split_at_mut(mid)
 }
 
-fn is_power_of_2(n: usize) -> bool {
+pub fn is_power_of_2(n: usize) -> bool {
     n != 0 && (n & (n - 1)) == 0
 }
 
