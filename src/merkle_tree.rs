@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prove_function() {
+    fn test_prove_sparse_queries() {
         let leaves = vec!["hello", "world", "rust", "test"];
         let tree = build_merkle_tree(leaves);
 
@@ -161,6 +161,25 @@ mod tests {
         ];
 
         assert_eq!(proof.len(), 2);
+        assert_eq!(proof, expected_proof);
+    }
+
+    #[test]
+    fn test_prove_consecutive_queries() {
+        let leaves = vec!["hello", "world", "rust", "test"];
+        let tree = build_merkle_tree(leaves);
+
+        // Query leaves at indices 0, 1, and 2 (0-indexed, corresponds to Julia's [1, 2, 3])
+        let queries = vec![0, 1, 2];
+        let proof = prove(tree, queries);
+
+        // Expected proof from actual Julia MerkleTree implementation
+        let expected_proof = vec![vec![
+            159, 134, 208, 129, 136, 76, 125, 101, 154, 47, 234, 160, 197, 90, 208, 21, 163, 191,
+            79, 27, 43, 11, 130, 44, 209, 93, 108, 21, 176, 240, 10, 8,
+        ]];
+
+        assert_eq!(proof.len(), 1);
         assert_eq!(proof, expected_proof);
     }
 }
