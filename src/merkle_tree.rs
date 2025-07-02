@@ -59,6 +59,63 @@ where
     return layers;
 }
 
+fn ith_layer(
+    current_layer: &Vec<u8>,
+    queries_len: usize,
+    queries: &mut Vec<usize>,
+    proof: &mut Vec<Vec<u8>>,
+) -> usize {
+    let mut next_queries_len: usize = 0;
+    let mut i = 0;
+
+    while i < queries_len {
+        let query = queries[i];
+        let sibling = query ^ 1;
+
+        next_queries_len += 1;
+        queries[next_queries_len - 1] = query >> 1;
+
+        let sibling_hash = &current_layer[sibling * 32..sibling * 32 + 32];
+        if i == queries_len - 1 {
+            proof.push(sibling_hash.to_vec());
+            break;
+        }
+
+        if query % 2 != 0 {
+            proof.push(sibling_hash.to_vec());
+            i += 1;
+        } else if queries[i + 1] != sibling {
+            proof.push(sibling_hash.to_vec());
+            i += 1;
+        } else {
+            i += 2;
+        }
+    }
+
+    next_queries_len
+}
+
+pub fn prove(tree: Vec<Vec<u8>>, queries: Vec<usize>) -> Vec<Vec<u8>> {
+    let mut proof: Vec<Vec<u8>> = Vec::new();
+    let depth = tree.len() - 1;
+
+    let mut queries_buff = queries.clone();
+    let mut queries_cnt = queries.len();
+
+    for i in 0..depth {
+        let current_layer = &tree[i];
+        queries_cnt = ith_layer(current_layer, queries_cnt, &mut queries_buff, &mut proof);
+    }
+
+    proof
+}
+
+pub fn verify<T>(root: Vec<u8>, batched_proof: Vec<Vec<u8>>, depth: u8, leaves: Vec<T>)
+where
+    T: AsRef<[u8]>,
+{
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,5 +137,30 @@ mod tests {
             160, 229, 27, 10, 236, 193, 146, 31, 236, 141, 245, 76, 152,
         ];
         assert_eq!(layers[2], expected_root);
+    }
+
+    #[test]
+    fn test_prove_function() {
+        let leaves = vec!["hello", "world", "rust", "test"];
+        let tree = build_merkle_tree(leaves);
+
+        // Query leaves at indices 0 and 2 (0-indexed, corresponds to Julia's [1, 3])
+        let queries = vec![0, 2];
+        let proof = prove(tree, queries);
+
+        // Expected proof from actual Julia MerkleTree implementation
+        let expected_proof = vec![
+            vec![
+                72, 110, 164, 98, 36, 209, 187, 79, 182, 128, 243, 79, 124, 154, 217, 106, 143, 36,
+                236, 136, 190, 115, 234, 142, 90, 108, 101, 38, 14, 156, 184, 167,
+            ],
+            vec![
+                159, 134, 208, 129, 136, 76, 125, 101, 154, 47, 234, 160, 197, 90, 208, 21, 163,
+                191, 79, 27, 43, 11, 130, 44, 209, 93, 108, 21, 176, 240, 10, 8,
+            ],
+        ];
+
+        assert_eq!(proof.len(), 2);
+        assert_eq!(proof, expected_proof);
     }
 }
