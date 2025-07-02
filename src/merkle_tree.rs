@@ -267,7 +267,7 @@ mod tests {
         // Test case 1: Sparse queries [0, 2]
         let queries = vec![0, 2];
         let proof = prove(tree.clone(), queries.clone());
-        let queried_leaves = vec![leaves[0], leaves[2]]; // "hello", "rust"
+        let queried_leaves = vec![leaves[0], leaves[2]];
 
         let is_valid = verify(root.clone(), proof, depth, queried_leaves, queries);
         assert!(is_valid, "Verification should succeed for sparse queries");
@@ -275,7 +275,7 @@ mod tests {
         // Test case 2: Consecutive queries [0, 1, 2]
         let queries2 = vec![0, 1, 2];
         let proof2 = prove(tree.clone(), queries2.clone());
-        let queried_leaves2 = vec![leaves[0], leaves[1], leaves[2]]; // "hello", "world", "rust"
+        let queried_leaves2 = vec![leaves[0], leaves[1], leaves[2]];
 
         let is_valid2 = verify(root, proof2, depth, queried_leaves2, queries2);
         assert!(
