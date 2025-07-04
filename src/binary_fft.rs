@@ -176,9 +176,35 @@ pub fn is_power_of_2(n: usize) -> bool {
     n != 0 && (n & (n - 1)) == 0
 }
 
-pub fn eval_sk_at_vks<F>(n: usize) -> Vec<F> {
-    // TODO: Implement
-    Vec::new()
+pub fn eval_sk_at_vks<F>(n: usize) -> Vec<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    assert!(is_power_of_2(n));
+    let num_subspaces = n.ilog2() as usize;
+
+    let mut sk_vks: Vec<F> = Vec::with_capacity(num_subspaces + 1);
+    sk_vks.push(F::one());
+
+    let mut layer: Vec<F> = (1..=num_subspaces)
+        .map(|i| F::new(F::ValueType::try_from(1 << i).unwrap()))
+        .collect();
+    let mut cur_len = num_subspaces;
+
+    for i in 1..num_subspaces {
+        for j in 1..cur_len {
+            if j == 1 {
+                sk_vks.push(layer[0] * layer[0] + sk_vks[i - 1] * layer[0]);
+            } else {
+                layer[j - 2] = layer[j - 1] * layer[j - 1] + sk_vks[i - 1] * layer[j - 1];
+            }
+        }
+        cur_len -= 1;
+    }
+
+    sk_vks
 }
 
 pub fn evaluate_basis<F>(basis_len: usize, sks_vks: &[F], x: F) -> Vec<F> {
