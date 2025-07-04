@@ -193,8 +193,8 @@ where
         .collect();
     let mut cur_len = num_subspaces;
 
-    for i in 1..num_subspaces {
-        for j in 1..cur_len {
+    for i in 1..=num_subspaces {
+        for j in 1..=cur_len {
             if j == 1 {
                 sk_vks.push(layer[0] * layer[0] + sk_vks[i - 1] * layer[0]);
             } else {
