@@ -207,9 +207,32 @@ where
     sk_vks
 }
 
-pub fn evaluate_basis<F>(basis_len: usize, sks_vks: &[F], x: F) -> Vec<F> {
-    // TODO: Implement
-    Vec::new()
+pub fn evaluate_basis<F>(basis_len: usize, sks_vks: &[F], x: F) -> Vec<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    assert!(is_power_of_2(basis_len));
+    let num_subspaces = basis_len.ilog2() as usize;
+
+    let mut sks_at_x: Vec<F> = Vec::with_capacity(num_subspaces);
+    sks_at_x.push(x);
+
+    for i in 2..=num_subspaces {
+        sks_at_x.push(next_s(sks_at_x[i - 2], sks_vks[i - 2]));
+    }
+
+    let mut basis: Vec<F> = vec![F::zero(); basis_len];
+    basis[0] = F::one();
+    for i in 1..=num_subspaces {
+        let current_len: usize = 1 << (i - 1);
+        for j in 1..=current_len {
+            basis[j + current_len - 1] = sks_at_x[i - 1] * basis[j - 1];
+        }
+    }
+
+    basis
 }
 
 pub fn compute_pis<F>(pis_len: usize, sks_vks: &[F]) -> Vec<F> {
