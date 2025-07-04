@@ -235,9 +235,25 @@ where
     basis
 }
 
-pub fn compute_pis<F>(pis_len: usize, sks_vks: &[F]) -> Vec<F> {
-    // TODO: Implement
-    Vec::new()
+pub fn compute_pis<F>(pis_len: usize, sks_vks: &[F]) -> Vec<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    assert!(pis_len == 1 << (sks_vks.len() - 1));
+
+    let mut pis: Vec<F> = vec![F::zero(); pis_len];
+    pis[0] = F::one();
+
+    for i in 2..=sks_vks.len() {
+        let current_len: usize = 1 << (i - 2);
+        for j in 1..=current_len {
+            pis[j + current_len - 1] = sks_vks[i - 2] * pis[j - 1];
+        }
+    }
+
+    pis
 }
 
 #[cfg(test)]
