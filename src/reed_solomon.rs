@@ -129,4 +129,55 @@ mod tests {
         let encoded = rs.encode(&message);
         assert_eq!(message, encoded[0..message.len()]);
     }
+
+    #[test]
+    fn test_reed_solomon_non_systematic() {
+        use crate::binary_fft::{eval_sk_at_vks, evaluate_basis};
+
+        let rs = ReedSolomonEncoding::<BinaryElem16>::new(1024, 4096); // 2^10, 2^12
+
+        // Create test vectors (simulating a_cfs and b_cfs)
+        let a_cfs: Vec<BinaryElem16> = (1..=1024).map(|i| BinaryElem16::new(i as u16)).collect();
+        let b_cfs: Vec<BinaryElem16> = (1025..=2048).map(|i| BinaryElem16::new(i as u16)).collect();
+
+        // Linear combination parameter
+        let l = BinaryElem16::new(42);
+
+        // Compute c_cfs = a_cfs + l * b_cfs
+        let c_cfs: Vec<BinaryElem16> = a_cfs
+            .iter()
+            .zip(b_cfs.iter())
+            .map(|(&a, &b)| a + l * b)
+            .collect();
+
+        // Pad to block length for non-systematic encoding
+        let mut a_padded = vec![BinaryElem16::zero(); 4096];
+        let mut b_padded = vec![BinaryElem16::zero(); 4096];
+        a_padded[0..1024].copy_from_slice(&a_cfs);
+        b_padded[0..1024].copy_from_slice(&b_cfs);
+
+        // Encode non-systematically
+        let a_enc = rs.encode_non_systematic(&a_padded);
+        let b_enc = rs.encode_non_systematic(&b_padded);
+
+        // Test random row query - using a fixed index instead of random
+        let x = 100usize;
+        let xf = BinaryElem16::new(x as u16);
+
+        // Compute expected value using basis evaluation
+        let sks_vks = eval_sk_at_vks::<BinaryElem16>(1024);
+        let basis = evaluate_basis(1024, &sks_vks, xf);
+        let c_at_x: BinaryElem16 = c_cfs
+            .iter()
+            .zip(basis.iter())
+            .map(|(&c, &b)| c * b)
+            .fold(BinaryElem16::zero(), |acc, val| acc + val);
+
+        // Compute result from encoded values
+        let a_row_opening = a_enc[x];
+        let b_row_opening = b_enc[x];
+        let result = a_row_opening + l * b_row_opening;
+
+        assert_eq!(result, c_at_x);
+    }
 }
