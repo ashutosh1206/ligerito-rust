@@ -100,15 +100,6 @@ where
     }
 }
 
-pub fn reed_solomon<F>(message_length: usize, block_length: usize) -> ReedSolomonEncoding<F>
-where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: TryFrom<usize>,
-    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
-{
-    ReedSolomonEncoding::new(message_length, block_length)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,7 +108,7 @@ mod tests {
     #[test]
     fn test_reed_solomon_systematic() {
         // Mirroring the test case from corresponding Julia implementation
-        let rs = reed_solomon::<BinaryElem16>(1024, 4096); // 2^10, 2^12
+        let rs = ReedSolomonEncoding::<BinaryElem16>::new(1024, 4096); // 2^10, 2^12
 
         // Create a simple test message instead of random
         let message: Vec<BinaryElem16> = (1..=1024).map(|i| BinaryElem16::new(i as u16)).collect();
