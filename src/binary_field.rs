@@ -3,6 +3,7 @@ use std::ops::{Add, Div, Mul};
 pub trait BinaryField: Sized {
     type ValueType;
     fn zero() -> Self;
+    fn one() -> Self;
     fn new(value: Self::ValueType) -> Self;
     fn inverse(&self) -> Result<Self, &'static str>;
 }
@@ -141,6 +142,10 @@ macro_rules! define_galois_field {
 
             fn zero() -> Self {
                 Self { value: 0 }
+            }
+
+            fn one() -> Self {
+                Self { value: 1 }
             }
 
             fn new(value: Self::ValueType) -> Self {
