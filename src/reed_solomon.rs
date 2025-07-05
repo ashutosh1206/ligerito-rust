@@ -98,6 +98,19 @@ where
 
         message_coeffs
     }
+
+    pub fn encode_non_systematic(&self, message: &[F]) -> Vec<F> {
+        assert!(message.len() == self.block_length());
+
+        let mut message_coeffs = message.to_vec();
+        for i in 0..self.message_length() {
+            message_coeffs[i] = message_coeffs[i] * self.pis[i];
+        }
+
+        fft(&mut message_coeffs, &self.twiddles);
+
+        message_coeffs
+    }
 }
 
 #[cfg(test)]
