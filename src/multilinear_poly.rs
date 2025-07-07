@@ -44,6 +44,25 @@ where
         let f1 = self.partial_eval_at_1();
         (f0.sum(), f1.sum())
     }
+
+    pub fn partial_eval(&self, rs: Vec<F>) -> Self {
+        let mut n = self.evals.len() / 2;
+        let mut partial_evals: Vec<F> = Vec::with_capacity(n);
+        let one = F::one();
+
+        for i in 0..n {
+            partial_evals.push((one + rs[0]) * self.evals[i] + rs[0] * self.evals[i + n]);
+        }
+
+        for i in 1..rs.len() {
+            n /= 2;
+            for j in 0..n {
+                partial_evals[j] = (one + rs[i]) * partial_evals[j] + rs[i] * partial_evals[j + n];
+            }
+        }
+
+        MultiLinearPoly::new(partial_evals)
+    }
 }
 
 pub fn eval_013_product<F>(f: &MultiLinearPoly<F>, g: &MultiLinearPoly<F>) -> (F, F, F)
