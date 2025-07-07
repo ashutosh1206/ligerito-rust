@@ -61,7 +61,7 @@ where
             }
         }
 
-        MultiLinearPoly::new(partial_evals)
+        MultiLinearPoly::new(partial_evals[0..n].to_vec())
     }
 }
 
