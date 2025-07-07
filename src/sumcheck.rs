@@ -1,4 +1,8 @@
-use crate::binary_field::BinaryField;
+use rand::distr::{Distribution, StandardUniform};
+
+use crate::binary_field::{BinaryField, random};
+use crate::multilinear_poly::MultiLinearPoly;
+use core::num;
 use std::ops::{Add, Mul};
 
 pub struct QuadraticEvals<F>
@@ -67,4 +71,32 @@ where
         p1.b + alpha * p2.b,
         p1.c + alpha * p2.c,
     )
+}
+
+pub fn sumcheck_prover<F>(f: &MultiLinearPoly<F>, claimed_sum: F) -> (Vec<(F, F)>, Vec<F>)
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+    StandardUniform: Distribution<F::ValueType>,
+{
+    let num_vars = f.num_vars();
+    let mut transcript: Vec<(F, F)> = Vec::with_capacity(num_vars);
+    let mut ris: Vec<F> = Vec::with_capacity(num_vars);
+    let mut current_poly = f.clone();
+    let mut current_sum = claimed_sum;
+
+    for _ in 0..num_vars {
+        let (s0, s1) = current_poly.eval_012();
+        assert_eq!(s0 + s1, current_sum);
+
+        transcript.push((s0, s1));
+        let r_i = random::<F>();
+        ris.push(r_i);
+
+        current_poly = current_poly.partial_eval(vec![r_i]);
+        current_sum = current_poly.sum();
+    }
+
+    (transcript, ris)
 }

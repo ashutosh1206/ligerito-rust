@@ -2,6 +2,7 @@ use crate::binary_fft::is_power_of_2;
 use crate::binary_field::BinaryField;
 use std::ops::{Add, Mul};
 
+#[derive(Debug, Clone)]
 pub struct MultiLinearPoly<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
@@ -27,6 +28,10 @@ where
 
     pub fn sum(&self) -> F {
         self.evals.iter().fold(F::zero(), |acc, &x| acc + x)
+    }
+
+    pub fn num_vars(&self) -> usize {
+        self.n
     }
 
     pub fn partial_eval_at_0(&self) -> Self {

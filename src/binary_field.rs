@@ -1,3 +1,4 @@
+use rand::distr::{Distribution, StandardUniform};
 use std::ops::{Add, Div, Mul};
 
 pub trait BinaryField: Sized {
@@ -157,6 +158,14 @@ macro_rules! define_galois_field {
             }
         }
     };
+}
+
+pub fn random<F>() -> F
+where
+    F: BinaryField,
+    StandardUniform: Distribution<F::ValueType>,
+{
+    F::new(rand::random::<F::ValueType>())
 }
 
 // irreducible polynomial: x^16 + x^5 + x^3 + x^2 + 1 (stored without x^16 term)

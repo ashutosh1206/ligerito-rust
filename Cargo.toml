@@ -12,6 +12,7 @@ name = "cryptoutils"
 path = "src/main.rs"
 
 [dependencies]
+rand = "0.9.1"
 sha2 = "0.10.9"
 
 [dev-dependencies]
