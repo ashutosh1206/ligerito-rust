@@ -55,3 +55,16 @@ where
     let b = at1 + at0 + a;
     return QuadraticPoly { a, b, c: at0 };
 }
+
+pub fn fold_quadratic<F>(p1: QuadraticPoly<F>, p2: QuadraticPoly<F>, alpha: F) -> QuadraticPoly<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    QuadraticPoly::new(
+        p1.a + alpha * p2.a,
+        p1.b + alpha * p2.b,
+        p1.c + alpha * p2.c,
+    )
+}
