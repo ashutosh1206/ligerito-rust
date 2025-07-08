@@ -54,7 +54,7 @@ where
     let numerator = atx + at0 + x * (at1 + at0);
     let denominator = x * x + x;
     // TODO: is there a better way to do this than .unwrap()?
-    let a = numerator + denominator.inverse().unwrap();
+    let a = numerator * denominator.inverse().unwrap();
     let b = at1 + at0 + a;
     return QuadraticPoly { a, b, c: at0 };
 }
