@@ -1,8 +1,7 @@
 use rand::distr::{Distribution, StandardUniform};
 
 use crate::binary_field::{BinaryField, random};
-use crate::multilinear_poly::MultiLinearPoly;
-use core::num;
+use crate::multilinear_poly::{MultiLinearPoly, eval_013_product};
 use std::ops::{Add, Mul};
 
 pub struct QuadraticEvals<F>
@@ -99,4 +98,80 @@ where
     }
 
     (transcript, ris)
+}
+
+pub fn sumcheck_verifier<F>(
+    transcript: Vec<(F, F)>,
+    ris: Vec<F>,
+    claimed_sum: F,
+    f: &MultiLinearPoly<F>,
+) -> bool
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    let mut h = claimed_sum;
+    for (i, (g0, g1)) in transcript.iter().enumerate() {
+        assert_eq!(*g0 + *g1, h);
+        h = *g0 * (F::one() + ris[i]) + (*g1 * ris[i]);
+    }
+
+    let f_eval = f.partial_eval(ris).sum();
+    f_eval == h
+}
+
+pub fn double_sumcheck_prover<F>(
+    fp: &MultiLinearPoly<F>,
+    gp: &MultiLinearPoly<F>,
+) -> (Vec<(F, F, F)>, Vec<F>)
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+    StandardUniform: Distribution<F::ValueType>,
+{
+    let num_vars = fp.num_vars();
+    let mut transcript: Vec<(F, F, F)> = Vec::with_capacity(num_vars);
+    let mut f = fp.clone();
+    let mut g = gp.clone();
+    let mut ris: Vec<F> = Vec::with_capacity(num_vars);
+
+    for _ in 0..num_vars {
+        let (s0, s1, s2) = eval_013_product(&f, &g);
+        transcript.push((s0, s1, s2));
+
+        let r_i = random::<F>();
+        ris.push(r_i);
+
+        f = f.partial_eval(vec![r_i]);
+        g = g.partial_eval(vec![r_i]);
+    }
+
+    (transcript, ris)
+}
+
+pub fn double_sumcheck_verifier<F>(
+    transcript: Vec<(F, F, F)>,
+    ris: Vec<F>,
+    claimed_sum: F,
+    fp: &MultiLinearPoly<F>,
+    gp: &MultiLinearPoly<F>,
+) -> bool
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    let mut h = claimed_sum;
+    for (i, (g0, g1, g2)) in transcript.iter().enumerate() {
+        assert_eq!(*g0 + *g1, h);
+        let gi = quadratic_from_evals(*g0, *g1, *g2, None);
+        h = gi.eval_quadratic(ris[i]);
+    }
+
+    // TODO: there has to be a better way than cloning ris twice
+    let f_eval = fp.partial_eval(ris.clone()).sum();
+    let g_eval = gp.partial_eval(ris.clone()).sum();
+    f_eval * g_eval == h
 }
