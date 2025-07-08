@@ -34,6 +34,10 @@ where
         self.n
     }
 
+    pub fn evals(&self) -> &Vec<F> {
+        &self.evals
+    }
+
     pub fn partial_eval_at_0(&self) -> Self {
         let half = self.evals.len() >> 1;
         MultiLinearPoly::new(self.evals[..half].to_vec())
