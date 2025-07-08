@@ -175,3 +175,109 @@ where
     let g_eval = gp.partial_eval(ris.clone()).sum();
     f_eval * g_eval == h
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::binary_field::BinaryElem16;
+
+    // Helper function to create a random polynomial for testing
+    fn random_poly(k: usize) -> MultiLinearPoly<BinaryElem16> {
+        let evals: Vec<BinaryElem16> = (0..(1 << k)).map(|_| random::<BinaryElem16>()).collect();
+        MultiLinearPoly::new(evals)
+    }
+
+    #[test]
+    fn test_sumcheck_basic() {
+        // Test with small polynomial (2 variables)
+        let f = random_poly(2);
+        let claimed_sum = f.sum();
+
+        // Run prover
+        let (transcript, ris) = sumcheck_prover(&f, claimed_sum);
+
+        // Run verifier
+        let verified = sumcheck_verifier(transcript, ris, claimed_sum, &f);
+        assert!(verified, "Sumcheck verification should pass");
+    }
+
+    #[test]
+    fn test_double_sumcheck_basic() {
+        // Test with small polynomials (2 variables each)
+        let f = random_poly(2);
+        let g = random_poly(2);
+
+        // Calculate claimed sum: sum of element-wise products
+        let claimed_sum: BinaryElem16 = f
+            .evals()
+            .iter()
+            .zip(g.evals().iter())
+            .map(|(fi, gi)| *fi * *gi)
+            .fold(BinaryElem16::zero(), |acc, x| acc + x);
+
+        // Run prover
+        let (transcript, ris) = double_sumcheck_prover(&f, &g);
+
+        // Run verifier
+        let verified = double_sumcheck_verifier(transcript, ris, claimed_sum, &f, &g);
+        assert!(verified, "Double sumcheck verification should pass");
+    }
+
+    #[test]
+    fn test_sumcheck_larger() {
+        // Test with larger polynomial (4 variables)
+        let f = random_poly(4);
+        let claimed_sum = f.sum();
+
+        let (transcript, ris) = sumcheck_prover(&f, claimed_sum);
+        let verified = sumcheck_verifier(transcript, ris, claimed_sum, &f);
+        assert!(verified, "Larger sumcheck verification should pass");
+    }
+
+    #[test]
+    fn test_sumcheck_single_variable() {
+        // Test edge case with 1 variable polynomial
+        let f = random_poly(1);
+        let claimed_sum = f.sum();
+
+        let (transcript, ris) = sumcheck_prover(&f, claimed_sum);
+        let verified = sumcheck_verifier(transcript, ris, claimed_sum, &f);
+        assert!(verified, "Single variable sumcheck should pass");
+    }
+
+    #[test]
+    fn test_double_sumcheck_larger() {
+        // Test with larger polynomials (3 variables each)
+        let f = random_poly(3);
+        let g = random_poly(3);
+
+        // Calculate claimed sum: sum of element-wise products
+        let claimed_sum: BinaryElem16 = f
+            .evals()
+            .iter()
+            .zip(g.evals().iter())
+            .map(|(fi, gi)| *fi * *gi)
+            .fold(BinaryElem16::zero(), |acc, x| acc + x);
+
+        let (transcript, ris) = double_sumcheck_prover(&f, &g);
+        let verified = double_sumcheck_verifier(transcript, ris, claimed_sum, &f, &g);
+        assert!(verified, "Larger double sumcheck should pass");
+    }
+
+    #[test]
+    fn test_sumcheck_known_values() {
+        // Test with known small values for deterministic behavior
+        let evals = vec![
+            BinaryElem16::new(1),
+            BinaryElem16::new(2),
+            BinaryElem16::new(3),
+            BinaryElem16::new(4),
+        ];
+        let f = MultiLinearPoly::new(evals);
+        let claimed_sum = f.sum(); // Should be 1+2+3+4 = 10 in binary field
+
+        let (transcript, ris) = sumcheck_prover(&f, claimed_sum);
+        let verified = sumcheck_verifier(transcript, ris, claimed_sum, &f);
+        assert!(verified, "Known values sumcheck should pass");
+    }
+}
