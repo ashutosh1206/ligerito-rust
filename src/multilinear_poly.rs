@@ -38,6 +38,12 @@ where
         &self.evals
     }
 
+    pub fn scale_evals(&mut self, alpha: F) {
+        for eval in &mut self.evals {
+            *eval = *eval * alpha;
+        }
+    }
+
     pub fn partial_eval_at_0(&self) -> Self {
         let half = self.evals.len() >> 1;
         MultiLinearPoly::new(self.evals[..half].to_vec())

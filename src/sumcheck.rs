@@ -15,6 +15,17 @@ where
     e2: F,
 }
 
+impl<F> QuadraticEvals<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    pub fn new(e0: F, e1: F, e2: F) -> Self {
+        Self { e0, e1, e2 }
+    }
+}
+
 pub struct QuadraticPoly<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
