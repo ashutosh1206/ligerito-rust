@@ -131,7 +131,7 @@ where
     evals_at_0
         .iter()
         .zip(evals_at_1.iter())
-        .map(|(&val0, &val1)| alpha * val0 + (F::one() + alpha) * val1)
+        .map(|(&val0, &val1)| alpha * val1 + (F::one() + alpha) * val0)
         .collect()
 }
 

@@ -4,6 +4,7 @@ use crate::binary_field::{BinaryField, random};
 use crate::multilinear_poly::{MultiLinearPoly, eval_013_product};
 use std::ops::{Add, Mul};
 
+#[derive(Hash, Debug)]
 pub struct QuadraticEvals<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,

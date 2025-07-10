@@ -11,7 +11,7 @@ pub trait BinaryField: Sized {
 
 macro_rules! define_galois_field {
     ($struct_name: ident, $value_type: ty, $irreducible:expr, $max_exp:expr) => {
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Clone, Copy, Hash)]
         pub struct $struct_name {
             pub value: $value_type,
         }
