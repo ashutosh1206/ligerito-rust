@@ -1,6 +1,7 @@
 use crate::binary_field::BinaryField;
 use crate::multilinear_poly::{MultiLinearPoly, eval_013_product};
 use crate::sumcheck::QuadraticEvals;
+use crate::{QuadraticPoly, fold_quadratic, quadratic_from_evals};
 use std::ops::{Add, Mul};
 
 pub struct SumcheckProverInstance<F>
@@ -132,4 +133,117 @@ where
         .zip(evals_at_1.iter())
         .map(|(&val0, &val1)| alpha * val0 + (F::one() + alpha) * val1)
         .collect()
+}
+
+pub struct SumcheckVerifierInstance<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    basis_polys: Vec<MultiLinearPoly<F>>,
+    separation_challenges: Vec<F>,
+    sum: F,
+    transcript: Vec<(F, F, F)>,
+    ris: Vec<F>,
+    tr_reader: usize,
+    running_poly: Option<QuadraticPoly<F>>,
+    to_glue: Option<QuadraticPoly<F>>,
+}
+
+impl<F> SumcheckVerifierInstance<F>
+where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    pub fn new(
+        b1: MultiLinearPoly<F>,
+        h1: F,
+        transcript: Vec<(F, F, F)>,
+    ) -> (Self, QuadraticEvals<F>) {
+        let mut verifier = Self {
+            basis_polys: vec![b1],
+            separation_challenges: vec![F::one()],
+            sum: h1,
+            transcript,
+            ris: vec![],
+            tr_reader: 0,
+            running_poly: None,
+            to_glue: None,
+        };
+        let (g0, g1, g2) = verifier.read_tr();
+        assert_eq!(g0 + g1, verifier.sum);
+
+        verifier.running_poly = Some(quadratic_from_evals(g0, g1, g2, None));
+        (verifier, QuadraticEvals::new(g0, g1, g2))
+    }
+
+    pub fn read_tr(&mut self) -> (F, F, F) {
+        assert!(self.tr_reader < self.transcript.len());
+        let (g0, g1, g2) = self.transcript[self.tr_reader];
+        self.tr_reader += 1;
+        return (g0, g1, g2);
+    }
+
+    pub fn fold(&mut self, r: F) -> QuadraticEvals<F> {
+        self.ris.push(r);
+        assert!(self.running_poly.is_some());
+        self.sum = self.running_poly.take().unwrap().eval_quadratic(r);
+
+        let (g0, g1, g2) = self.read_tr();
+        assert_eq!(g0 + g1, self.sum);
+        self.running_poly = Some(quadratic_from_evals(g0, g1, g2, None));
+        QuadraticEvals::new(g0, g1, g2)
+    }
+
+    pub fn introduce_new(&mut self, bi: MultiLinearPoly<F>, h: F) -> QuadraticEvals<F> {
+        let (g0, g1, g2) = self.read_tr();
+        assert_eq!(g0 + g1, h);
+
+        self.basis_polys.push(bi);
+        self.to_glue = Some(quadratic_from_evals(g0, g1, g2, None));
+
+        QuadraticEvals::new(g0, g1, g2)
+    }
+
+    pub fn glue(&mut self, alpha: F) {
+        assert!(self.running_poly.is_some());
+        assert!(self.to_glue.is_some());
+
+        self.separation_challenges.push(alpha);
+        self.running_poly = Some(fold_quadratic(
+            self.running_poly.take().unwrap(),
+            self.to_glue.as_ref().unwrap().clone(),
+            alpha,
+        ))
+    }
+
+    pub fn evaluate_basis_polys(&mut self, r: F) -> F {
+        self.ris.push(r);
+        let mut b_eval = self.basis_polys[0].partial_eval(self.ris.clone()).evals()[0];
+
+        for i in 1..self.basis_polys.len() {
+            let n = self.basis_polys[i].num_vars();
+            let eval_pts = self.ris[self.ris.len() - n..].to_vec();
+            let bi_eval = self.basis_polys[i].partial_eval(eval_pts).evals()[0];
+
+            b_eval = b_eval + self.separation_challenges[i] * bi_eval;
+        }
+
+        b_eval
+    }
+
+    pub fn verify(&mut self, r: F, f_eval: F) -> bool {
+        assert!(self.running_poly.is_some());
+        let running_poly = self.running_poly.as_ref().unwrap().clone();
+        self.sum = running_poly.eval_quadratic(r);
+        let basis_evals = self.evaluate_basis_polys(r);
+        f_eval * basis_evals == self.sum
+    }
+
+    // pub fn evaluate_basis_polys_partially(&mut self, r: F, k: usize) {
+    //     self.ris.push(r);
+
+    // }
 }

@@ -26,6 +26,7 @@ where
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct QuadraticPoly<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
