@@ -247,3 +247,469 @@ where
 
     // }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::binary_field::BinaryElem16;
+    use crate::binary_field::random;
+    use sha2::{Digest, Sha256};
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    // Simple Fiat-Shamir transcript simulator
+    struct FSTranscript {
+        hasher: Sha256,
+        counter: u32,
+    }
+
+    impl FSTranscript {
+        fn new(seed: u32) -> Self {
+            let mut hasher = Sha256::new();
+            hasher.update(&seed.to_le_bytes());
+            Self { hasher, counter: 0 }
+        }
+
+        fn absorb(&mut self, evals: &QuadraticEvals<BinaryElem16>) {
+            // In real implementation, you'd properly serialize the field elements
+            // For now, we'll use a simple approach
+            let mut hasher = DefaultHasher::new();
+            evals.hash(&mut hasher);
+            let hash = hasher.finish();
+            self.hasher.update(&hash.to_le_bytes());
+        }
+
+        fn squeeze(&mut self) -> BinaryElem16 {
+            self.hasher.update(&self.counter.to_le_bytes());
+            self.counter += 1;
+            let result = self.hasher.finalize_reset();
+            let value = u16::from_le_bytes([result[0], result[1]]);
+            self.hasher = Sha256::new();
+            BinaryElem16::new(value)
+        }
+    }
+
+    fn random_poly(k: usize) -> MultiLinearPoly<BinaryElem16> {
+        let evals: Vec<BinaryElem16> = (0..(1 << k)).map(|_| random::<BinaryElem16>()).collect();
+        MultiLinearPoly::new(evals)
+    }
+
+    fn inner_product(
+        f: &MultiLinearPoly<BinaryElem16>,
+        b: &MultiLinearPoly<BinaryElem16>,
+    ) -> BinaryElem16 {
+        f.evals()
+            .iter()
+            .zip(b.evals().iter())
+            .map(|(&fi, &bi)| fi * bi)
+            .fold(BinaryElem16::zero(), |acc, x| acc + x)
+    }
+
+    #[test]
+    fn test_ligerito_emulator() {
+        let k = 12;
+        let glues = vec![2, 5, 9];
+        let bs: Vec<MultiLinearPoly<BinaryElem16>> =
+            glues.iter().map(|&gi| random_poly(k - gi)).collect();
+
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_product(&f, &b1);
+
+        // Store challenges and hs for verifier
+        let mut prover_challenges = Vec::new();
+        let mut verifier_challenges = Vec::new();
+        let mut hs = Vec::new();
+
+        // === PROVER - Complete execution ===
+        let mut fs_prover = FSTranscript::new(1234);
+        let (mut prover, s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+        fs_prover.absorb(&s1);
+
+        let mut folds = 0;
+        let mut gl_idx = 0;
+
+        for _i in 0..(k - 1) {
+            let ri = fs_prover.squeeze();
+            prover_challenges.push(ri);
+            let si = prover.fold(ri);
+            fs_prover.absorb(&si);
+            folds += 1;
+
+            if gl_idx < glues.len() && folds == glues[gl_idx] {
+                let bi = bs[gl_idx].clone();
+                let hi = inner_product(&prover.f, &bi);
+                hs.push(hi);
+
+                let gl_i = prover.introduce_new(bi, hi);
+                fs_prover.absorb(&gl_i);
+
+                let alpha = fs_prover.squeeze();
+                prover.glue(alpha);
+
+                gl_idx += 1;
+            }
+        }
+
+        // === VERIFIER - Use complete transcript ===
+        let mut fs_verifier = FSTranscript::new(1234);
+        let mut folds = 0;
+        let mut gl_idx = 0;
+        let (mut verifier, g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+        fs_verifier.absorb(&g1);
+
+        for i in 0..(k - 1) {
+            let ri = fs_verifier.squeeze();
+            verifier_challenges.push(ri);
+            let gi = verifier.fold(ri);
+            fs_verifier.absorb(&gi);
+            folds += 1;
+
+            if gl_idx < glues.len() && folds == glues[gl_idx] {
+                let bi = bs[gl_idx].clone();
+                let hi = hs[gl_idx];
+
+                let gl_i = verifier.introduce_new(bi, hi);
+                fs_verifier.absorb(&gl_i);
+
+                let alpha = fs_verifier.squeeze();
+                verifier.glue(alpha);
+
+                gl_idx += 1;
+            }
+        }
+
+        // Final check - emulate oracle access to f
+        let final_ri = fs_verifier.squeeze();
+        verifier_challenges.push(final_ri);
+        let f_eval = f.partial_eval(verifier_challenges.clone()).evals()[0];
+
+        // Perform final verification
+        let ok = verifier.verify(final_ri, f_eval);
+        assert!(ok, "Ligerito protocol verification should pass");
+
+        // Verify that prover and verifier used same challenges
+        assert_eq!(
+            prover_challenges,
+            verifier_challenges[..prover_challenges.len()]
+        );
+    }
+
+    #[test]
+    fn test_ligerito_emulator_no_glues() {
+        // Test without any glues first to isolate the issue
+        let k = 5;
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_product(&f, &b1);
+
+        // Store challenges for verifier
+        let mut prover_challenges = Vec::new();
+        let mut verifier_challenges = Vec::new();
+
+        // === PROVER - Complete execution ===
+        let mut fs_prover = FSTranscript::new(1234);
+        let (mut prover, s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+        fs_prover.absorb(&s1);
+
+        for _i in 0..(k - 1) {
+            let ri = fs_prover.squeeze();
+            prover_challenges.push(ri);
+            let si = prover.fold(ri);
+            fs_prover.absorb(&si);
+        }
+
+        // === VERIFIER - Use complete transcript ===
+        let mut fs_verifier = FSTranscript::new(1234);
+        let (mut verifier, g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+        fs_verifier.absorb(&g1);
+
+        for _i in 0..(k - 1) {
+            let ri = fs_verifier.squeeze();
+            verifier_challenges.push(ri);
+            let gi = verifier.fold(ri);
+            fs_verifier.absorb(&gi);
+        }
+
+        // Final check - emulate oracle access to f
+        let final_ri = fs_verifier.squeeze();
+        verifier_challenges.push(final_ri);
+        let f_eval = f.partial_eval(verifier_challenges.clone()).evals()[0];
+
+        // Perform final verification
+        let ok = verifier.verify(final_ri, f_eval);
+        assert!(ok, "Ligerito protocol without glues should pass");
+
+        // Verify that prover and verifier used same challenges
+        assert_eq!(
+            prover_challenges,
+            verifier_challenges[..prover_challenges.len()]
+        );
+    }
+
+    #[test]
+    fn test_ligerito_simple() {
+        // Start with a smaller test first
+        let k = 5;
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_product(&f, &b1);
+
+        // === PROVER - Generate complete transcript ===
+        let (mut prover, _s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+
+        // Generate some deterministic challenges
+        let mut challenges = Vec::new();
+        for i in 0..(k - 1) {
+            let ri = BinaryElem16::new((i + 1) as u16);
+            challenges.push(ri);
+            prover.fold(ri);
+        }
+
+        // === VERIFIER - Use complete transcript ===
+        let (mut verifier, _g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+
+        for &ri in &challenges {
+            verifier.fold(ri);
+        }
+
+        // Final check - emulate oracle access to f
+        let final_r = BinaryElem16::new(42);
+        let f_eval = f
+            .partial_eval(
+                challenges
+                    .iter()
+                    .chain(std::iter::once(&final_r))
+                    .cloned()
+                    .collect(),
+            )
+            .evals()[0];
+
+        // Perform final verification
+        let ok = verifier.verify(final_r, f_eval);
+        assert!(ok, "Simple ligerito protocol verification should pass");
+    }
+
+    #[test]
+    fn test_basic_sumcheck_debug() {
+        // Minimal test to debug the assertion issue
+        let k = 3;
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_product(&f, &b1);
+
+        // === PROVER ===
+        let (mut prover, s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+        println!("Initial s1: {:?}", s1);
+
+        // Just do one fold
+        let r1 = BinaryElem16::new(1);
+        let s2 = prover.fold(r1);
+        println!("After first fold s2: {:?}", s2);
+        println!("Prover transcript: {:?}", prover.transcript);
+
+        // === VERIFIER ===
+        let (mut verifier, g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+        println!("Initial g1: {:?}", g1);
+        println!("Verifier initial sum: {:?}", verifier.sum);
+        println!("Verifier initial tr_reader: {:?}", verifier.tr_reader);
+        println!(
+            "Verifier initial transcript length: {:?}",
+            verifier.transcript.len()
+        );
+
+        let g2 = verifier.fold(r1);
+        println!("After first fold g2: {:?}", g2);
+
+        // Try a second fold
+        let r2 = BinaryElem16::new(2);
+        let s3 = prover.fold(r2);
+        println!("After second fold s3: {:?}", s3);
+
+        println!("About to do second verifier fold...");
+        println!("Verifier sum before fold: {:?}", verifier.sum);
+        println!("Verifier tr_reader: {:?}", verifier.tr_reader);
+        println!("Transcript length: {:?}", verifier.transcript.len());
+
+        // The issue is here - let me check if the transcript has enough entries
+        if verifier.tr_reader >= verifier.transcript.len() {
+            println!(
+                "ERROR: tr_reader {} >= transcript.len() {}",
+                verifier.tr_reader,
+                verifier.transcript.len()
+            );
+            return;
+        }
+
+        let g3 = verifier.fold(r2);
+        println!("After second fold g3: {:?}", g3);
+    }
+
+    #[test]
+    fn test_ligerito_deterministic() {
+        // Test with deterministic challenges instead of Fiat-Shamir
+        let k = 3;
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_product(&f, &b1);
+
+        // Use deterministic challenges
+        let challenges: Vec<BinaryElem16> = (1..(k as u16)).map(BinaryElem16::new).collect();
+
+        // === PROVER - Complete execution ===
+        let (mut prover, _s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+
+        for &ri in &challenges {
+            prover.fold(ri);
+        }
+
+        // === VERIFIER - Use complete transcript ===
+        let (mut verifier, _g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+
+        for &ri in &challenges {
+            verifier.fold(ri);
+        }
+
+        // Final check - emulate oracle access to f
+        let final_r = BinaryElem16::new(42);
+        let mut all_challenges = challenges.clone();
+        all_challenges.push(final_r);
+        let f_eval = f.partial_eval(all_challenges).evals()[0];
+
+        // Perform final verification
+        let ok = verifier.verify(final_r, f_eval);
+        assert!(
+            ok,
+            "Ligerito protocol with deterministic challenges should pass"
+        );
+    }
+
+    #[test]
+    fn test_ligerito_minimal() {
+        // Super minimal test with k=2 to trace through exactly
+        let k = 2;
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_product(&f, &b1);
+
+        println!("=== MINIMAL TEST k=2 ===");
+        println!("f.evals = {:?}", f.evals());
+        println!("b1.evals = {:?}", b1.evals());
+        println!("h = {:?}", h);
+
+        // === PROVER - Complete execution ===
+        let (mut prover, s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+        println!("Initial s1: {:?}", s1);
+
+        // Only one fold for k=2
+        let r1 = BinaryElem16::new(1);
+        let s2 = prover.fold(r1);
+        println!("After fold s2: {:?}", s2);
+
+        // === VERIFIER - Use complete transcript ===
+        let (mut verifier, g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+        println!("Initial g1: {:?}", g1);
+
+        let g2 = verifier.fold(r1);
+        println!("After fold g2: {:?}", g2);
+
+        // Final check
+        let final_r = BinaryElem16::new(42);
+        let f_eval = f.partial_eval(vec![r1, final_r]).evals()[0];
+        println!("f_eval = {:?}", f_eval);
+
+        let ok = verifier.verify(final_r, f_eval);
+        assert!(ok, "Minimal test should pass");
+    }
+
+    #[test]
+    fn test_quadratic_construction() {
+        // Test the quadratic_from_evals function independently
+        let at0 = BinaryElem16::new(100);
+        let at1 = BinaryElem16::new(200);
+        let atx = BinaryElem16::new(150);
+
+        let quad = quadratic_from_evals(at0, at1, atx, None);
+
+        println!("Testing quadratic construction:");
+        println!("at0={:?}, at1={:?}, atx={:?}", at0, at1, atx);
+
+        // Verify the quadratic evaluates correctly at the three points
+        let eval_0 = quad.eval_quadratic(BinaryElem16::zero());
+        let eval_1 = quad.eval_quadratic(BinaryElem16::one());
+        let eval_3 = quad.eval_quadratic(BinaryElem16::new(3));
+
+        println!(
+            "quad(0)={:?}, quad(1)={:?}, quad(3)={:?}",
+            eval_0, eval_1, eval_3
+        );
+
+        assert_eq!(eval_0, at0);
+        assert_eq!(eval_1, at1);
+        assert_eq!(eval_3, atx);
+
+        // Also test at another point
+        let eval_2 = quad.eval_quadratic(BinaryElem16::new(2));
+        println!("quad(2)={:?}", eval_2);
+    }
+
+    #[test]
+    fn test_specific_failing_case() {
+        // Use the exact values from the failing test to debug
+        let k = 3;
+
+        // Create specific polynomials with known values to trace the issue
+        let f_evals = vec![
+            BinaryElem16::new(1),
+            BinaryElem16::new(2),
+            BinaryElem16::new(3),
+            BinaryElem16::new(4),
+            BinaryElem16::new(5),
+            BinaryElem16::new(6),
+            BinaryElem16::new(7),
+            BinaryElem16::new(8),
+        ];
+        let f = MultiLinearPoly::new(f_evals);
+
+        let b1_evals = vec![
+            BinaryElem16::new(10),
+            BinaryElem16::new(20),
+            BinaryElem16::new(30),
+            BinaryElem16::new(40),
+            BinaryElem16::new(50),
+            BinaryElem16::new(60),
+            BinaryElem16::new(70),
+            BinaryElem16::new(80),
+        ];
+        let b1 = MultiLinearPoly::new(b1_evals);
+        let h = inner_product(&f, &b1);
+
+        println!("=== SPECIFIC FAILING CASE ===");
+        println!("f.evals = {:?}", f.evals());
+        println!("b1.evals = {:?}", b1.evals());
+        println!("h = {:?}", h);
+
+        // === PROVER ===
+        let (mut prover, s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+        println!("Initial s1: {:?}", s1);
+
+        let r1 = BinaryElem16::new(1);
+        let s2 = prover.fold(r1);
+        println!("After fold 1 s2: {:?}", s2);
+
+        let r2 = BinaryElem16::new(2);
+        let s3 = prover.fold(r2);
+        println!("After fold 2 s3: {:?}", s3);
+
+        // === VERIFIER ===
+        let (mut verifier, g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+        println!("Initial g1: {:?}", g1);
+
+        let g2 = verifier.fold(r1);
+        println!("After fold 1 g2: {:?}", g2);
+
+        // This should pass but might not
+        let g3 = verifier.fold(r2);
+        println!("After fold 2 g3: {:?}", g3);
+    }
+}
