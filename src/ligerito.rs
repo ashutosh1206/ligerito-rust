@@ -242,10 +242,43 @@ where
         f_eval * basis_evals == self.sum
     }
 
-    // pub fn evaluate_basis_polys_partially(&mut self, r: F, k: usize) {
-    //     self.ris.push(r);
+    pub fn evaluate_basis_polys_partially(&mut self, r: F, k: usize) -> Vec<F> {
+        self.ris.push(r);
+        let partial_eval_res = self.basis_polys[0].partial_eval(self.ris.to_vec());
+        let mut acc = partial_eval_res.evals().to_vec();
 
-    // }
+        for i in 1..self.basis_polys.len() {
+            let n = self.basis_polys[i].num_vars();
+            let eval_pts = self.ris[self.ris.len() - n + k..].to_vec();
+            let partial_eval_res = self.basis_polys[i].partial_eval(eval_pts);
+            let bi_evals = partial_eval_res.evals();
+            let alpha = self.separation_challenges[i];
+
+            assert_eq!(acc.len(), bi_evals.len());
+            acc = acc
+                .iter()
+                .zip(bi_evals.iter())
+                .map(|(&acci, &bievali)| acci + alpha * bievali)
+                .collect();
+        }
+
+        acc
+    }
+
+    pub fn verify_partial(&mut self, r: F, f_partial_eval: Vec<F>) -> bool {
+        let k = f_partial_eval.len().ilog2() as usize;
+        assert!(self.running_poly.is_some());
+        self.sum = self.running_poly.as_ref().unwrap().eval_quadratic(r);
+        let basis_evals = self.evaluate_basis_polys_partially(r, k);
+
+        assert_eq!(f_partial_eval.len(), basis_evals.len());
+        f_partial_eval
+            .iter()
+            .zip(basis_evals.iter())
+            .map(|(&fevali, &bevali)| fevali * bevali)
+            .fold(F::zero(), |acc, x| acc + x)
+            == self.sum
+    }
 }
 
 #[cfg(test)]
