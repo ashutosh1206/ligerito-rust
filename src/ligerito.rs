@@ -249,7 +249,9 @@ where
 
         for i in 1..self.basis_polys.len() {
             let n = self.basis_polys[i].num_vars();
-            let eval_pts = self.ris[self.ris.len() - n + k..].to_vec();
+            // self.ris.len() >= n - k so `self.ris.len() - (n - k)` will never underflow
+            // but `self.ris.len() - n + k` can underflow, causing panic
+            let eval_pts = self.ris[self.ris.len() - (n - k)..].to_vec();
             let partial_eval_res = self.basis_polys[i].partial_eval(eval_pts);
             let bi_evals = partial_eval_res.evals();
             let alpha = self.separation_challenges[i];
