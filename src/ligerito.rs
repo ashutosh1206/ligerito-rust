@@ -688,6 +688,112 @@ mod tests {
         println!("quad(2)={:?}", eval_2);
     }
 
+    // Helper function to match Julia's inner function
+    fn inner_with_rs(
+        f: &MultiLinearPoly<BinaryElem16>,
+        b: &MultiLinearPoly<BinaryElem16>,
+        rs: &[BinaryElem16],
+    ) -> BinaryElem16 {
+        let n1 = f.num_vars();
+        let n2 = b.num_vars();
+
+        // Julia: eval_pts = rs[1:n1 - n2] (1-based indexing)
+        // Rust: eval_pts = rs[0..(n1 - n2)] (0-based indexing)
+        // Handle case where n1 - n2 might be 0 (empty slice) or larger than rs.len()
+        let eval_len = if n1 >= n2 { n1 - n2 } else { 0 };
+        let eval_len = eval_len.min(rs.len()); // Don't exceed rs length
+        let eval_pts = &rs[0..eval_len];
+
+        let fp = if eval_pts.is_empty() {
+            // If no evaluation points, return f unchanged
+            f.clone()
+        } else {
+            f.partial_eval(eval_pts.to_vec())
+        };
+        assert_eq!(fp.num_vars(), b.num_vars());
+
+        fp.evals()
+            .iter()
+            .zip(b.evals().iter())
+            .map(|(&fi, &bi)| fi * bi)
+            .fold(BinaryElem16::zero(), |acc, x| acc + x)
+    }
+
+    #[test]
+    fn test_ligerito_partial_emulator() {
+        // Port of the Julia ligerito_partial_emulator.jl test
+        let k = 12;
+        let rs: Vec<BinaryElem16> = (0..(k - 4)).map(|_| random::<BinaryElem16>()).collect(); // rs = rand(BinaryElem16, k - 4)
+        let glues = vec![2, 5];
+        let bs: Vec<MultiLinearPoly<BinaryElem16>> =
+            glues.iter().map(|&gi| random_poly(k - gi)).collect(); // bs = [random_poly(BinaryElem16, k - gi) for gi in glues]
+
+        let separation_challenges: Vec<BinaryElem16> =
+            (0..glues.len()).map(|_| random::<BinaryElem16>()).collect(); // separation_challenges = rand(BinaryElem16, length(glues))
+
+        let f = random_poly(k);
+        let b1 = random_poly(k);
+        let h = inner_with_rs(&f, &b1, &rs); // h = inner(f, b1, rs)
+
+        // Store hs for verifier
+        let mut hs = Vec::new();
+
+        // === PROVER ===
+        let (mut prover, _s1) = SumcheckProverInstance::new(f.clone(), b1.clone(), h);
+        let mut folds = 0;
+        let mut gl_idx = 0;
+
+        // prover folds rs.len() - 1 times in total (Julia: for i in 1:(length(rs) - 1))
+        for i in 0..(rs.len() - 1) {
+            prover.fold(rs[i]);
+            folds += 1;
+
+            if gl_idx < glues.len() && folds == glues[gl_idx] {
+                let bi = bs[gl_idx].clone();
+                let alpha = separation_challenges[gl_idx];
+
+                // Julia: hi = inner_from_running(prover, bi)
+                let hi = inner_product(&prover.f, &bi);
+                hs.push(hi);
+
+                prover.introduce_new(bi, hi);
+                prover.glue(alpha);
+
+                gl_idx += 1;
+            }
+        }
+
+        // === VERIFIER ===
+        let mut folds = 0;
+        let mut gl_idx = 0;
+        let (mut verifier, _g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
+
+        // verifier folds rs.len() - 1 times before the final check
+        for i in 0..(rs.len() - 1) {
+            verifier.fold(rs[i]);
+            folds += 1;
+
+            if gl_idx < glues.len() && folds == glues[gl_idx] {
+                let bi = bs[gl_idx].clone();
+                let hi = hs[gl_idx];
+                let alpha = separation_challenges[gl_idx];
+
+                verifier.introduce_new(bi, hi);
+                verifier.glue(alpha);
+
+                gl_idx += 1;
+            }
+        }
+
+        // Final check - emulate oracle access to f
+        // Julia: f_partial_eval = partial_eval(f, rs).evals
+        let f_partial_eval = f.partial_eval(rs.clone()).evals().clone();
+
+        // Julia: ok = verify_partial(verifier, rs[end], f_partial_eval)
+        let ok = verifier.verify_partial(rs[rs.len() - 1], f_partial_eval);
+        assert!(ok, "Ligerito partial emulator verification should pass");
+    }
+
     #[test]
     fn test_specific_failing_case() {
         // Use the exact values from the failing test to debug
