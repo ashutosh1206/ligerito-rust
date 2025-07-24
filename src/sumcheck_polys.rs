@@ -1,5 +1,5 @@
-use crate::binary_field::BinaryField;
 use crate::utils::evaluate_lagrange_basis;
+use crate::{binary_field::BinaryField, evaluate_scaled_basis_inplace};
 use std::ops::{Add, Mul};
 
 pub fn precompute_alpha_powers<F>(alpha: F, n: usize) -> Vec<F>
@@ -23,9 +23,10 @@ pub fn induce_sumcheck_poly<F>(
     sks_vks: &[F],
     opened_rows: &[&[F]],
     v_challenges: &[F],
-    sorted_queries: &[usize],
+    sorted_queries: &[F::ValueType],
     alpha: F,
-) where
+) -> (Vec<F>, F)
+where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
     F::ValueType: TryFrom<usize> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
@@ -37,5 +38,32 @@ pub fn induce_sumcheck_poly<F>(
 
     let n_rows = opened_rows.len();
     let alpha_pows = precompute_alpha_powers(alpha, n_rows);
-    let partial_basis = vec![F::zero(); 1 << n];
+    let mut enforced_sum = F::zero();
+    let mut basis_poly = vec![F::zero(); 1 << n];
+
+    let mut local_basis = vec![F::zero(); 1 << n];
+    let mut local_sks_x = vec![F::zero(); sks_vks.len()];
+
+    for i in 0..n_rows {
+        let row = opened_rows[i];
+        let query = sorted_queries[i];
+
+        let dot = row
+            .iter()
+            .zip(gr.iter())
+            .map(|(&r, &g)| r * g)
+            .fold(F::zero(), |acc, x| acc + x);
+
+        let alpha_pow = alpha_pows[i];
+        enforced_sum = enforced_sum + (dot * alpha_pow);
+
+        let qf = F::new(query);
+        evaluate_scaled_basis_inplace(&mut local_sks_x, &mut local_basis, sks_vks, qf, alpha_pow);
+
+        for j in 0..basis_poly.len() {
+            basis_poly[j] = basis_poly[j] + local_basis[j];
+        }
+    }
+
+    (basis_poly, enforced_sum)
 }
