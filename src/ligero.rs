@@ -1,7 +1,9 @@
+use crate::binary_fft::{eval_sk_at_vks, evaluate_scaled_basis_inplace};
 use crate::binary_field::BinaryField;
 use crate::data_structures::RecursiveLigeroWitness;
 use crate::merkle_tree::build_merkle_tree;
 use crate::reed_solomon::ReedSolomonEncoding;
+use crate::utils::evaluate_lagrange_basis;
 use std::ops::{Add, Mul};
 
 fn poly2flatmat<F>(poly: Vec<F>, m: usize, n: usize, inv_rate: usize) -> Vec<F>
@@ -85,10 +87,38 @@ where
     }
 }
 
-pub fn ligero_verify<F>(queries: Vec<usize>)
+pub fn ligero_verify<F>(queries: &[F::ValueType], opened_rows: &[&[F]], yr: &[F], challenges: &[F])
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: TryFrom<usize>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
+    let gr = evaluate_lagrange_basis(challenges);
+    let n = yr.len().ilog2() as usize;
+    // Why do we need to specify <F> here? Could we do something in eval_sk_at_vks to fix this?
+    let sks_vks = eval_sk_at_vks::<F>(n);
+
+    let mut local_basis = vec![F::zero(); 1 << n];
+    let mut local_sks_x = vec![F::zero(); sks_vks.len()];
+
+    for i in 0..opened_rows.len() {
+        let row = opened_rows[i];
+        let query: F::ValueType = queries[i];
+
+        let dot = row
+            .iter()
+            .zip(gr.iter())
+            .map(|(&r, &g)| r * g)
+            .fold(F::zero(), |acc, x| acc + x);
+
+        let qf = F::new(query);
+        evaluate_scaled_basis_inplace(&mut local_sks_x, &mut local_basis, &sks_vks, qf, F::one());
+        let e = yr
+            .iter()
+            .zip(local_basis.iter())
+            .map(|(&y, &l)| y * l)
+            .fold(F::zero(), |acc, x| acc + x);
+
+        assert_eq!(e, dot, "Verification failed at index {}", i);
+    }
 }

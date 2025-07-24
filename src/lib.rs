@@ -7,6 +7,7 @@ pub mod merkle_tree;
 pub mod multilinear_poly;
 pub mod reed_solomon;
 pub mod sumcheck;
+pub mod sumcheck_polys;
 pub mod utils;
 
 pub use binary_fft::*;
@@ -18,4 +19,5 @@ pub use merkle_tree::*;
 pub use multilinear_poly::*;
 pub use reed_solomon::*;
 pub use sumcheck::*;
+pub use sumcheck_polys::*;
 pub use utils::*;

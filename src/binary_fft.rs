@@ -235,6 +235,33 @@ where
     basis
 }
 
+pub fn evaluate_scaled_basis_inplace<F>(
+    sks_at_x: &mut [F],
+    basis: &mut [F],
+    sks_vks: &[F],
+    x: F,
+    alpha: F,
+) where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    let num_subspaces = basis.len().ilog2() as usize;
+
+    sks_at_x[0] = x;
+    for i in 2..=num_subspaces {
+        sks_at_x[i - 1] = next_s(sks_at_x[i - 2], sks_vks[i - 2]);
+    }
+
+    basis[0] = alpha;
+    for i in 1..=num_subspaces {
+        let current_len: usize = 1 << (i - 1);
+        for j in 1..=current_len {
+            basis[j + current_len - 1] = sks_at_x[i - 1] * basis[j - 1];
+        }
+    }
+}
+
 pub fn compute_pis<F>(pis_len: usize, sks_vks: &[F]) -> Vec<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,

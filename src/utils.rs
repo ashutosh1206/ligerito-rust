@@ -1,10 +1,7 @@
 use crate::binary_field::BinaryField;
-use std::{
-    ops::{Add, Mul},
-    thread::current,
-};
+use std::ops::{Add, Mul};
 
-fn evaluate_lagrange_basis<F>(rs: Vec<F>) -> Vec<F>
+pub fn evaluate_lagrange_basis<F>(rs: &[F]) -> Vec<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
 {
