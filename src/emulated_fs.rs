@@ -33,8 +33,8 @@ impl FS {
 
     pub fn get_field<F>(&mut self) -> F
     where
-        F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
-        F::ValueType: TryFrom<u128> + Copy,
+        F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+        F::ValueType: TryFrom<u128>,
         <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,
     {
         let value = self.squeeze();

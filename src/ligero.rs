@@ -6,7 +6,7 @@ use crate::reed_solomon::ReedSolomonEncoding;
 use crate::utils::evaluate_lagrange_basis;
 use std::ops::{Add, Mul};
 
-fn poly2flatmat<F>(poly: Vec<F>, m: usize, n: usize, inv_rate: usize) -> Vec<F>
+fn poly2flatmat<F>(poly: &[F], m: usize, n: usize, inv_rate: usize) -> Vec<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
     F::ValueType: TryFrom<usize>,
@@ -24,8 +24,12 @@ where
     flat_mat
 }
 
-fn encode_cols<F>(poly_flat_mat: &mut Vec<F>, m_target: usize, n: usize, rs: ReedSolomonEncoding<F>)
-where
+fn encode_cols<F>(
+    poly_flat_mat: &mut Vec<F>,
+    m_target: usize,
+    n: usize,
+    rs: &ReedSolomonEncoding<F>,
+) where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
@@ -63,10 +67,10 @@ fn extract_leaves<F: BinaryField + Copy>(
 }
 
 pub fn ligero_commit<F>(
-    poly: Vec<F>,
+    poly: &[F],
     m: usize,
     n: usize,
-    rs: ReedSolomonEncoding<F>,
+    rs: &ReedSolomonEncoding<F>,
 ) -> RecursiveLigeroWitness<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
@@ -84,6 +88,8 @@ where
     RecursiveLigeroWitness {
         flat_mat: poly_flat_mat,
         tree,
+        num_rows: m_target,
+        num_cols: n,
     }
 }
 

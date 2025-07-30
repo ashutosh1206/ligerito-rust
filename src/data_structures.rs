@@ -24,6 +24,8 @@ where
 {
     pub flat_mat: Vec<F>,
     pub tree: Vec<Vec<u8>>,
+    pub num_rows: usize,
+    pub num_cols: usize,
 }
 
 pub struct RecursiveLigeroCommitment {
