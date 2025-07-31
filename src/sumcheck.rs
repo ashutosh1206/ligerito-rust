@@ -106,7 +106,7 @@ where
         let r_i = random::<F>();
         ris.push(r_i);
 
-        current_poly = current_poly.partial_eval(vec![r_i]);
+        current_poly = current_poly.partial_eval(&vec![r_i]);
         current_sum = current_poly.sum();
     }
 
@@ -130,7 +130,7 @@ where
         h = *g0 * (F::one() + ris[i]) + (*g1 * ris[i]);
     }
 
-    let f_eval = f.partial_eval(ris).sum();
+    let f_eval = f.partial_eval(&ris).sum();
     f_eval == h
 }
 
@@ -157,8 +157,8 @@ where
         let r_i = random::<F>();
         ris.push(r_i);
 
-        f = f.partial_eval(vec![r_i]);
-        g = g.partial_eval(vec![r_i]);
+        f = f.partial_eval(&vec![r_i]);
+        g = g.partial_eval(&vec![r_i]);
     }
 
     (transcript, ris)
@@ -183,9 +183,8 @@ where
         h = gi.eval_quadratic(ris[i]);
     }
 
-    // TODO: there has to be a better way than cloning ris twice
-    let f_eval = fp.partial_eval(ris.clone()).sum();
-    let g_eval = gp.partial_eval(ris.clone()).sum();
+    let f_eval = fp.partial_eval(&ris).sum();
+    let g_eval = gp.partial_eval(&ris).sum();
     f_eval * g_eval == h
 }
 

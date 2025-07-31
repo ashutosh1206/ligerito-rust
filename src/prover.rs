@@ -1,15 +1,19 @@
 use crate::binary_fft::eval_sk_at_vks;
 use crate::binary_field::BinaryField;
-use crate::data_structures::{LigeritoProof, ProverConfig, RecursiveLigeroCommitment};
+use crate::data_structures::{
+    LigeritoProof, ProverConfig, RecursiveLigeroCommitment, RecursiveLigeroProof,
+};
 use crate::emulated_fs::FS;
-use crate::ligero::ligero_commit;
+use crate::ligero::{extract_row, ligero_commit};
+use crate::merkle_tree::prove;
 use crate::multilinear_poly::MultiLinearPoly;
+use crate::sumcheck_polys::induce_sumcheck_poly;
 use std::ops::{Add, Mul};
 
 pub fn prover<F>(config: ProverConfig<F>, poly: Vec<F>)
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
-    F::ValueType: TryFrom<usize> + From<u128>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F::ValueType: TryFrom<usize> + From<u128> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     let mut fs = FS::new(1234);
@@ -36,7 +40,7 @@ where
     let partial_evals_0: Vec<F> = (0..config.initial_k).map(|_| fs.get_field()).collect();
 
     let mut f = MultiLinearPoly::new(poly);
-    f = f.partial_eval(partial_evals_0);
+    f = f.partial_eval(&partial_evals_0);
 
     let wtns_1 = ligero_commit(
         f.evals(),
@@ -55,5 +59,22 @@ where
 
     let sks_vks = eval_sk_at_vks::<F>(f.num_vars());
 
-    // let opened_rows =
+    let opened_rows: Vec<Vec<F>> = queries
+        .iter()
+        .map(|&q| extract_row(&wtns_0.flat_mat, q, wtns_0.num_rows, wtns_0.num_cols))
+        .collect();
+    let mtree_proof = prove(wtns_0.tree, &queries);
+
+    let (basis_poly, enforced_sum) = induce_sumcheck_poly(
+        f.num_vars(),
+        &sks_vks,
+        &opened_rows,
+        &partial_evals_0,
+        &queries,
+        alpha,
+    );
+    proof.initial_ligero_proof = Some(RecursiveLigeroProof {
+        opened_rows,
+        merkle_proof: mtree_proof,
+    });
 }

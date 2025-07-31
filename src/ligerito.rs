@@ -112,9 +112,9 @@ where
     }
 
     pub fn fold(&mut self, r: F) -> QuadraticEvals<F> {
-        self.f = self.f.partial_eval(vec![r]);
+        self.f = self.f.partial_eval(&vec![r]);
         for i in 0..self.basis_polys.len() {
-            self.basis_polys[i] = self.basis_polys[i].partial_eval(vec![r]);
+            self.basis_polys[i] = self.basis_polys[i].partial_eval(&vec![r]);
         }
         let (s0, s1, s2) = self.eval_01x_product(None);
         self.transcript.push((s0, s1, s2));
@@ -221,12 +221,12 @@ where
 
     pub fn evaluate_basis_polys(&mut self, r: F) -> F {
         self.ris.push(r);
-        let mut b_eval = self.basis_polys[0].partial_eval(self.ris.clone()).evals()[0];
+        let mut b_eval = self.basis_polys[0].partial_eval(&self.ris).evals()[0];
 
         for i in 1..self.basis_polys.len() {
             let n = self.basis_polys[i].num_vars();
             let eval_pts = self.ris[self.ris.len() - n..].to_vec();
-            let bi_eval = self.basis_polys[i].partial_eval(eval_pts).evals()[0];
+            let bi_eval = self.basis_polys[i].partial_eval(&eval_pts).evals()[0];
 
             b_eval = b_eval + self.separation_challenges[i] * bi_eval;
         }
@@ -244,15 +244,15 @@ where
 
     pub fn evaluate_basis_polys_partially(&mut self, r: F, k: usize) -> Vec<F> {
         self.ris.push(r);
-        let partial_eval_res = self.basis_polys[0].partial_eval(self.ris.to_vec());
+        let partial_eval_res = self.basis_polys[0].partial_eval(&self.ris);
         let mut acc = partial_eval_res.evals().to_vec();
 
         for i in 1..self.basis_polys.len() {
             let n = self.basis_polys[i].num_vars();
             // self.ris.len() >= n - k so `self.ris.len() - (n - k)` will never underflow
             // but `self.ris.len() - n + k` can underflow, causing panic
-            let eval_pts = self.ris[self.ris.len() - (n - k)..].to_vec();
-            let partial_eval_res = self.basis_polys[i].partial_eval(eval_pts);
+            let eval_pts = &self.ris[self.ris.len() - (n - k)..];
+            let partial_eval_res = self.basis_polys[i].partial_eval(&eval_pts);
             let bi_evals = partial_eval_res.evals();
             let alpha = self.separation_challenges[i];
 
@@ -417,7 +417,7 @@ mod tests {
         // Final check - emulate oracle access to f
         let final_ri = fs_verifier.squeeze();
         verifier_challenges.push(final_ri);
-        let f_eval = f.partial_eval(verifier_challenges.clone()).evals()[0];
+        let f_eval = f.partial_eval(&verifier_challenges).evals()[0];
 
         // Perform final verification
         let ok = verifier.verify(final_ri, f_eval);
@@ -469,7 +469,7 @@ mod tests {
         // Final check - emulate oracle access to f
         let final_ri = fs_verifier.squeeze();
         verifier_challenges.push(final_ri);
-        let f_eval = f.partial_eval(verifier_challenges.clone()).evals()[0];
+        let f_eval = f.partial_eval(&verifier_challenges).evals()[0];
 
         // Perform final verification
         let ok = verifier.verify(final_ri, f_eval);
@@ -510,15 +510,12 @@ mod tests {
 
         // Final check - emulate oracle access to f
         let final_r = BinaryElem16::new(42);
-        let f_eval = f
-            .partial_eval(
-                challenges
-                    .iter()
-                    .chain(std::iter::once(&final_r))
-                    .cloned()
-                    .collect(),
-            )
-            .evals()[0];
+        let eval_points: Vec<BinaryElem16> = challenges
+            .iter()
+            .chain(std::iter::once(&final_r))
+            .cloned()
+            .collect();
+        let f_eval = f.partial_eval(&eval_points).evals()[0];
 
         // Perform final verification
         let ok = verifier.verify(final_r, f_eval);
@@ -609,7 +606,7 @@ mod tests {
         let final_r = BinaryElem16::new(42);
         let mut all_challenges = challenges.clone();
         all_challenges.push(final_r);
-        let f_eval = f.partial_eval(all_challenges).evals()[0];
+        let f_eval = f.partial_eval(&all_challenges).evals()[0];
 
         // Perform final verification
         let ok = verifier.verify(final_r, f_eval);
@@ -650,7 +647,7 @@ mod tests {
 
         // Final check
         let final_r = BinaryElem16::new(42);
-        let f_eval = f.partial_eval(vec![r1, final_r]).evals()[0];
+        let f_eval = f.partial_eval(&vec![r1, final_r]).evals()[0];
         println!("f_eval = {:?}", f_eval);
 
         let ok = verifier.verify(final_r, f_eval);
@@ -708,7 +705,7 @@ mod tests {
             // If no evaluation points, return f unchanged
             f.clone()
         } else {
-            f.partial_eval(eval_pts.to_vec())
+            f.partial_eval(&eval_pts)
         };
         assert_eq!(fp.num_vars(), b.num_vars());
 
@@ -787,7 +784,7 @@ mod tests {
 
         // Final check - emulate oracle access to f
         // Julia: f_partial_eval = partial_eval(f, rs).evals
-        let f_partial_eval = f.partial_eval(rs.clone()).evals().clone();
+        let f_partial_eval = f.partial_eval(&rs).evals().clone();
 
         // Julia: ok = verify_partial(verifier, rs[end], f_partial_eval)
         let ok = verifier.verify_partial(rs[rs.len() - 1], f_partial_eval);

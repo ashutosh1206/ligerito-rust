@@ -95,11 +95,11 @@ fn ith_layer(
     next_queries_len
 }
 
-pub fn prove(tree: Vec<Vec<u8>>, queries: Vec<usize>) -> Vec<Vec<u8>> {
+pub fn prove(tree: Vec<Vec<u8>>, queries: &[usize]) -> Vec<Vec<u8>> {
     let mut proof: Vec<Vec<u8>> = Vec::new();
     let depth = tree.len() - 1;
 
-    let mut queries_buff = queries.clone();
+    let mut queries_buff = queries.to_vec();
     let mut queries_cnt = queries.len();
 
     for i in 0..depth {
@@ -218,7 +218,7 @@ mod tests {
 
         // Query leaves at indices 0 and 2 (0-indexed, corresponds to Julia's [1, 3])
         let queries = vec![0, 2];
-        let proof = prove(tree, queries);
+        let proof = prove(tree, &queries);
 
         // Expected proof from actual Julia MerkleTree implementation
         let expected_proof = vec![
@@ -243,7 +243,7 @@ mod tests {
 
         // Query leaves at indices 0, 1, and 2 (0-indexed, corresponds to Julia's [1, 2, 3])
         let queries = vec![0, 1, 2];
-        let proof = prove(tree, queries);
+        let proof = prove(tree, &queries);
 
         // Expected proof from actual Julia MerkleTree implementation
         let expected_proof = vec![vec![
@@ -266,7 +266,7 @@ mod tests {
 
         // Test case 1: Sparse queries [0, 2]
         let queries = vec![0, 2];
-        let proof = prove(tree.clone(), queries.clone());
+        let proof = prove(tree.clone(), &queries);
         let queried_leaves = vec![leaves[0], leaves[2]];
 
         let is_valid = verify(root.clone(), proof, depth, queried_leaves, queries);
@@ -274,7 +274,7 @@ mod tests {
 
         // Test case 2: Consecutive queries [0, 1, 2]
         let queries2 = vec![0, 1, 2];
-        let proof2 = prove(tree.clone(), queries2.clone());
+        let proof2 = prove(tree.clone(), &queries2);
         let queried_leaves2 = vec![leaves[0], leaves[1], leaves[2]];
 
         let is_valid2 = verify(root, proof2, depth, queried_leaves2, queries2);

@@ -21,9 +21,9 @@ where
 pub fn induce_sumcheck_poly<F>(
     n: usize,
     sks_vks: &[F],
-    opened_rows: &[&[F]],
+    opened_rows: &[Vec<F>],
     v_challenges: &[F],
-    sorted_queries: &[F::ValueType],
+    sorted_queries: &[usize],
     alpha: F,
 ) -> (Vec<F>, F)
 where
@@ -45,8 +45,10 @@ where
     let mut local_sks_x = vec![F::zero(); sks_vks.len()];
 
     for i in 0..n_rows {
-        let row = opened_rows[i];
-        let query = sorted_queries[i];
+        let row = &opened_rows[i];
+        // FIXME: this will panic if sorted_queries[i] > F::ValueType::MAX, handle this condition
+        // and return an error in that case
+        let query = F::ValueType::try_from(sorted_queries[i]).unwrap();
 
         let dot = row
             .iter()

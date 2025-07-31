@@ -39,7 +39,7 @@ fn encode_cols<F>(
     }
 }
 
-fn extract_row<F: BinaryField + Copy>(
+pub fn extract_row<F: BinaryField + Copy>(
     flat_mat: &[F],
     row_idx: usize,
     m_target: usize,
