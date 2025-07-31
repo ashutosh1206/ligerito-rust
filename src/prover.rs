@@ -59,7 +59,7 @@ where
     let mut queries = fs.get_distinct_queries(wtns_0.num_rows, S);
     let alpha: F = fs.get_field();
 
-    let mut sks_vks = eval_sk_at_vks::<F>(f.num_vars());
+    let mut sks_vks = eval_sk_at_vks::<F>(1 << f.num_vars());
 
     let mut opened_rows: Vec<Vec<F>> = queries
         .iter()
@@ -187,12 +187,5 @@ where
         wtns_prev = wtns_next;
     }
 
-    return FinalizedLigeritoProof {
-        initial_ligero_cm: proof.initial_ligero_cm,
-        initial_ligero_proof: proof.initial_ligero_proof.unwrap(), // Handle case where this is None
-        recursive_commitments: proof.recursive_commitments,
-        recursive_proofs: proof.recursive_proofs,
-        final_ligero_proof: proof.final_ligero_proof.unwrap(), // Handle case where this is None
-        sumcheck_transcript: proof.sumcheck_transcript.unwrap(), // Handle case where this is None
-    };
+    panic!("Prover completed without entering final step - check config.recursive_steps");
 }
