@@ -10,10 +10,10 @@ where
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
-    f: MultiLinearPoly<F>,
+    pub f: MultiLinearPoly<F>,
     basis_polys: Vec<MultiLinearPoly<F>>,
     sum: F,
-    transcript: Vec<(F, F, F)>,
+    pub transcript: Vec<(F, F, F)>,
     to_be_glued: Option<MultiLinearPoly<F>>,
 }
 

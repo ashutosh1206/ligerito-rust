@@ -93,7 +93,7 @@ where
     }
 }
 
-pub fn ligero_verify<F>(queries: &[F::ValueType], opened_rows: &[&[F]], yr: &[F], challenges: &[F])
+pub fn ligero_verify<F>(queries: &[usize], opened_rows: &[&[F]], yr: &[F], challenges: &[F])
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
     F::ValueType: TryFrom<usize> + Copy,
@@ -109,7 +109,7 @@ where
 
     for i in 0..opened_rows.len() {
         let row = opened_rows[i];
-        let query: F::ValueType = queries[i];
+        let query = F::ValueType::try_from(queries[i]).unwrap();
 
         let dot = row
             .iter()

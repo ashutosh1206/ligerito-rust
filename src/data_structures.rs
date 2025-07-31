@@ -38,7 +38,8 @@ where
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
-    pub opened_rows: Vec<Vec<F>>, // should this be a flat array that we constructured in src/ligero.rs
+    // should this be a flat array that we constructured in src/ligero.rs? Probably not
+    pub opened_rows: Vec<Vec<F>>,
     pub merkle_proof: Vec<Vec<u8>>,
 }
 

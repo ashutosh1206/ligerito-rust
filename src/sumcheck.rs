@@ -25,6 +25,14 @@ where
     pub fn new(e0: F, e1: F, e2: F) -> Self {
         Self { e0, e1, e2 }
     }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&self.e0.to_bytes());
+        bytes.extend_from_slice(&self.e1.to_bytes());
+        bytes.extend_from_slice(&self.e2.to_bytes());
+        bytes
+    }
 }
 
 #[derive(Debug, Clone)]
