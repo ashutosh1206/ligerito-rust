@@ -11,6 +11,7 @@ pub mod reed_solomon;
 pub mod sumcheck;
 pub mod sumcheck_polys;
 pub mod utils;
+pub mod verifier;
 
 pub use binary_fft::*;
 pub use binary_field::*;
@@ -25,3 +26,4 @@ pub use reed_solomon::*;
 pub use sumcheck::*;
 pub use sumcheck_polys::*;
 pub use utils::*;
+pub use verifier::*;

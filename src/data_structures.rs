@@ -18,6 +18,14 @@ where
     pub reed_solomon_codes: Vec<ReedSolomonEncoding<F>>,
 }
 
+pub struct VerifierConfig {
+    pub recursive_steps: usize,
+    pub initial_dim: usize,
+    pub log_dims: Vec<usize>,
+    pub initial_k: usize,
+    pub ks: Vec<usize>,
+}
+
 pub struct RecursiveLigeroWitness<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,

@@ -121,7 +121,7 @@ fn verify_ith_layer(
     layer: &mut Vec<Vec<u8>>,
     queries: &mut Vec<usize>,
     curr_cnt: usize,
-    proof: &Vec<Vec<u8>>,
+    proof: &[Vec<u8>],
     mut proof_cnt: usize,
 ) -> (usize, usize) {
     let mut next_cnt = 0;
@@ -162,27 +162,26 @@ fn verify_ith_layer(
 }
 
 pub fn verify<T>(
-    root: Vec<u8>,
-    batched_proof: Vec<Vec<u8>>,
+    root: &[u8],
+    batched_proof: &[Vec<u8>],
     depth: usize,
-    leaves: Vec<T>,
-    leaf_indices: Vec<usize>,
+    leaves: &[T],
+    leaf_indices: &[usize],
 ) -> bool
 where
     T: AsRef<[u8]>,
 {
-    let mut proof = batched_proof.clone();
     let mut layer: Vec<Vec<u8>> = leaves
         .iter()
         .map(|leaf| Sha256::digest(leaf).to_vec())
         .collect();
-    let mut queries = leaf_indices.clone();
+    let mut queries = leaf_indices.to_vec();
     let mut curr_cnt = queries.len();
     let mut proof_cnt = 0usize;
 
     for _ in 0..depth {
         (curr_cnt, proof_cnt) =
-            verify_ith_layer(&mut layer, &mut queries, curr_cnt, &proof, proof_cnt);
+            verify_ith_layer(&mut layer, &mut queries, curr_cnt, batched_proof, proof_cnt);
     }
 
     curr_cnt == 1 && layer[0] == root
@@ -269,7 +268,7 @@ mod tests {
         let proof = prove(&tree, &queries);
         let queried_leaves = vec![leaves[0], leaves[2]];
 
-        let is_valid = verify(root.clone(), proof, depth, queried_leaves, queries);
+        let is_valid = verify(&root, &proof, depth, &queried_leaves, &queries);
         assert!(is_valid, "Verification should succeed for sparse queries");
 
         // Test case 2: Consecutive queries [0, 1, 2]
@@ -277,7 +276,7 @@ mod tests {
         let proof2 = prove(&tree, &queries2);
         let queried_leaves2 = vec![leaves[0], leaves[1], leaves[2]];
 
-        let is_valid2 = verify(root, proof2, depth, queried_leaves2, queries2);
+        let is_valid2 = verify(&root, &proof2, depth, &queried_leaves2, &queries2);
         assert!(
             is_valid2,
             "Verification should succeed for consecutive queries"

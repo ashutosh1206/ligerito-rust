@@ -267,7 +267,7 @@ where
         acc
     }
 
-    pub fn verify_partial(&mut self, r: F, f_partial_eval: Vec<F>) -> bool {
+    pub fn verify_partial(&mut self, r: F, f_partial_eval: &[F]) -> bool {
         let k = f_partial_eval.len().ilog2() as usize;
         assert!(self.running_poly.is_some());
         self.sum = self.running_poly.as_ref().unwrap().eval_quadratic(r);
@@ -787,7 +787,7 @@ mod tests {
         let f_partial_eval = f.partial_eval(&rs).evals().clone();
 
         // Julia: ok = verify_partial(verifier, rs[end], f_partial_eval)
-        let ok = verifier.verify_partial(rs[rs.len() - 1], f_partial_eval);
+        let ok = verifier.verify_partial(rs[rs.len() - 1], &f_partial_eval);
         assert!(ok, "Ligerito partial emulator verification should pass");
     }
 
