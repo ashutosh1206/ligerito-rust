@@ -1,5 +1,6 @@
 pub mod binary_fft;
 pub mod binary_field;
+pub mod config;
 pub mod data_structures;
 pub mod emulated_fs;
 pub mod ligerito;
@@ -15,6 +16,7 @@ pub mod verifier;
 
 pub use binary_fft::*;
 pub use binary_field::*;
+pub use config::*;
 pub use data_structures::*;
 pub use emulated_fs::*;
 pub use ligerito::*;
