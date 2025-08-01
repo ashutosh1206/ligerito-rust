@@ -60,7 +60,7 @@ where
         (f0.sum(), f1.sum())
     }
 
-    pub fn partial_eval(&self, rs: Vec<F>) -> Self {
+    pub fn partial_eval(&self, rs: &[F]) -> Self {
         let mut n = self.evals.len() / 2;
         let mut partial_evals: Vec<F> = Vec::with_capacity(n);
         let one = F::one();

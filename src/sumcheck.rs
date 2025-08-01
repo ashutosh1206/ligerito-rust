@@ -25,6 +25,14 @@ where
     pub fn new(e0: F, e1: F, e2: F) -> Self {
         Self { e0, e1, e2 }
     }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&self.e0.to_bytes());
+        bytes.extend_from_slice(&self.e1.to_bytes());
+        bytes.extend_from_slice(&self.e2.to_bytes());
+        bytes
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -106,7 +114,7 @@ where
         let r_i = random::<F>();
         ris.push(r_i);
 
-        current_poly = current_poly.partial_eval(vec![r_i]);
+        current_poly = current_poly.partial_eval(&vec![r_i]);
         current_sum = current_poly.sum();
     }
 
@@ -130,7 +138,7 @@ where
         h = *g0 * (F::one() + ris[i]) + (*g1 * ris[i]);
     }
 
-    let f_eval = f.partial_eval(ris).sum();
+    let f_eval = f.partial_eval(&ris).sum();
     f_eval == h
 }
 
@@ -157,8 +165,8 @@ where
         let r_i = random::<F>();
         ris.push(r_i);
 
-        f = f.partial_eval(vec![r_i]);
-        g = g.partial_eval(vec![r_i]);
+        f = f.partial_eval(&vec![r_i]);
+        g = g.partial_eval(&vec![r_i]);
     }
 
     (transcript, ris)
@@ -183,9 +191,8 @@ where
         h = gi.eval_quadratic(ris[i]);
     }
 
-    // TODO: there has to be a better way than cloning ris twice
-    let f_eval = fp.partial_eval(ris.clone()).sum();
-    let g_eval = gp.partial_eval(ris.clone()).sum();
+    let f_eval = fp.partial_eval(&ris).sum();
+    let g_eval = gp.partial_eval(&ris).sum();
     f_eval * g_eval == h
 }
 

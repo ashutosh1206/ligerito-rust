@@ -99,17 +99,14 @@ where
         message_coeffs
     }
 
-    pub fn encode_non_systematic(&self, message: &[F]) -> Vec<F> {
+    pub fn encode_non_systematic(&self, message: &mut [F]) {
         assert!(message.len() == self.block_length());
 
-        let mut message_coeffs = message.to_vec();
         for i in 0..self.message_length() {
-            message_coeffs[i] = message_coeffs[i] * self.pis[i];
+            message[i] = message[i] * self.pis[i];
         }
 
-        fft(&mut message_coeffs, &self.twiddles);
-
-        message_coeffs
+        fft(message, &self.twiddles);
     }
 }
 
@@ -157,8 +154,8 @@ mod tests {
         b_padded[0..1024].copy_from_slice(&b_cfs);
 
         // Encode non-systematically
-        let a_enc = rs.encode_non_systematic(&a_padded);
-        let b_enc = rs.encode_non_systematic(&b_padded);
+        rs.encode_non_systematic(&mut a_padded);
+        rs.encode_non_systematic(&mut b_padded);
 
         // Test random row query - using a fixed index instead of random
         let x = 100usize;
@@ -174,8 +171,8 @@ mod tests {
             .fold(BinaryElem16::zero(), |acc, val| acc + val);
 
         // Compute result from encoded values
-        let a_row_opening = a_enc[x];
-        let b_row_opening = b_enc[x];
+        let a_row_opening = a_padded[x];
+        let b_row_opening = b_padded[x];
         let result = a_row_opening + l * b_row_opening;
 
         assert_eq!(result, c_at_x);

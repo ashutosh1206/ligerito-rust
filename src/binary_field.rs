@@ -7,6 +7,7 @@ pub trait BinaryField: Sized {
     fn one() -> Self;
     fn new(value: Self::ValueType) -> Self;
     fn inverse(&self) -> Result<Self, &'static str>;
+    fn to_bytes(&self) -> Vec<u8>;
 }
 
 macro_rules! define_galois_field {
@@ -155,6 +156,10 @@ macro_rules! define_galois_field {
 
             fn inverse(&self) -> Result<Self, &'static str> {
                 self.inverse()
+            }
+
+            fn to_bytes(&self) -> Vec<u8> {
+                self.value.to_le_bytes().to_vec()
             }
         }
     };
