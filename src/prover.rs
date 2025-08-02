@@ -15,8 +15,9 @@ use std::ops::{Add, Mul};
 pub fn prover<F>(config: ProverConfig<F>, poly: Vec<F>) -> FinalizedLigeritoProof<F>
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
-    F::ValueType: TryFrom<usize> + From<u128> + Copy,
+    F::ValueType: TryFrom<usize> + TryFrom<u128> + Copy + std::fmt::Debug,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+    <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,
 {
     let mut fs = FS::new(1234);
     let S = 148;
@@ -58,6 +59,7 @@ where
 
     let mut queries = fs.get_distinct_queries(wtns_0.num_rows, S);
     let alpha: F = fs.get_field();
+    
 
     let mut sks_vks = eval_sk_at_vks::<F>(1 << f.num_vars());
 

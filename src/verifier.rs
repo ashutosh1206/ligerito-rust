@@ -10,8 +10,9 @@ use std::ops::{Add, Mul};
 pub fn verifier<F>(config: VerifierConfig, proof: FinalizedLigeritoProof<F>) -> bool
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
-    F::ValueType: TryFrom<usize> + From<u128> + Copy,
+    F::ValueType: TryFrom<usize> + TryFrom<u128> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+    <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,
 {
     let mut fs = FS::new(1234);
     let S = 148;
@@ -32,6 +33,7 @@ where
         .map(|row| row.iter().flat_map(|elem| elem.to_bytes()).collect())
         .collect();
 
+    
     let is_valid = verify(
         &proof.initial_ligero_cm.root,
         &proof.initial_ligero_proof.merkle_proof,

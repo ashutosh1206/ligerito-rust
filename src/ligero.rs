@@ -102,7 +102,7 @@ where
     let gr = evaluate_lagrange_basis(challenges);
     let n = yr.len().ilog2() as usize;
     // Why do we need to specify <F> here? Could we do something in eval_sk_at_vks to fix this?
-    let sks_vks = eval_sk_at_vks::<F>(n);
+    let sks_vks = eval_sk_at_vks::<F>(yr.len());
 
     let mut local_basis = vec![F::zero(); 1 << n];
     let mut local_sks_x = vec![F::zero(); sks_vks.len()];
