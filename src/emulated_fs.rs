@@ -70,6 +70,7 @@ impl FS {
             }
         }
 
+        queries.sort();
         queries
     }
 }

@@ -91,8 +91,9 @@ mod tests {
         println!("  Num rows: {}", wtns.num_rows);
         println!("  Num cols: {}", wtns.num_cols);
         
-        // Test with a few specific queries AND some random ones
-        let queries = vec![0, 1, 100, 50459, 50294, 1959];
+        // Test with a few specific queries AND some random ones (must be sorted)
+        let mut queries = vec![0, 1, 100, 50459, 50294, 1959];
+        queries.sort();
         let opened_rows: Vec<Vec<BinaryElem32>> = queries
             .iter()
             .map(|&q| extract_row(&wtns.flat_mat, q, wtns.num_rows, wtns.num_cols))

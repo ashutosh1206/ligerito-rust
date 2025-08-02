@@ -100,7 +100,6 @@ pub fn prove(tree: &[Vec<u8>], queries: &[usize]) -> Vec<Vec<u8>> {
     let depth = tree.len() - 1;
 
     let mut queries_buff = queries.to_vec();
-    queries_buff.sort(); // Sort queries to ensure correct processing
     let mut queries_cnt = queries.len();
 
     for i in 0..depth {
@@ -136,25 +135,22 @@ fn verify_ith_layer(
         queries[next_cnt - 1] = query >> 1;
 
         if i == curr_cnt - 1 {
-            let pp = &proof[proof_cnt];
             proof_cnt += 1;
             if query % 2 != 0 {
-                layer[next_cnt - 1] = hash_siblings(pp, &layer[i]);
+                layer[next_cnt - 1] = hash_siblings(&proof[proof_cnt - 1], &layer[i]);
             } else {
-                layer[next_cnt - 1] = hash_siblings(&layer[i], pp);
+                layer[next_cnt - 1] = hash_siblings(&layer[i], &proof[proof_cnt - 1]);
             }
             break;
         }
 
         if query % 2 != 0 {
-            let pp = &proof[proof_cnt];
             proof_cnt += 1;
-            layer[next_cnt - 1] = hash_siblings(pp, &layer[i]);
+            layer[next_cnt - 1] = hash_siblings(&proof[proof_cnt - 1], &layer[i]);
             i += 1;
         } else if queries[i + 1] != sibling {
-            let pp = &proof[proof_cnt];
             proof_cnt += 1;
-            layer[next_cnt - 1] = hash_siblings(&layer[i], pp);
+            layer[next_cnt - 1] = hash_siblings(&layer[i], &proof[proof_cnt - 1]);
             i += 1;
         } else {
             layer[next_cnt - 1] = hash_siblings(&layer[i], &layer[i + 1]);
@@ -175,19 +171,11 @@ pub fn verify<T>(
 where
     T: AsRef<[u8]>,
 {
-    // Create sorted indices and reorder leaves accordingly
-    let mut indexed_queries: Vec<(usize, usize)> = leaf_indices
+    let mut layer: Vec<Vec<u8>> = leaves
         .iter()
-        .enumerate()
-        .map(|(i, &query)| (query, i))
+        .map(|leaf| Sha256::digest(leaf).to_vec())
         .collect();
-    indexed_queries.sort_by_key(|&(query, _)| query);
-
-    let mut layer: Vec<Vec<u8>> = indexed_queries
-        .iter()
-        .map(|&(_, original_idx)| Sha256::digest(&leaves[original_idx]).to_vec())
-        .collect();
-    let mut queries: Vec<usize> = indexed_queries.iter().map(|&(query, _)| query).collect();
+    let mut queries = leaf_indices.to_vec();
     let mut curr_cnt = queries.len();
     let mut proof_cnt = 0usize;
 
