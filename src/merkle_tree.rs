@@ -1,5 +1,6 @@
 use crate::binary_fft::is_power_of_2;
-use sha2::{Digest, Sha256};
+use blake3;
+use sha2::Sha256;
 
 fn hash_array<T>(x: Vec<T>) -> Vec<u8>
 where
@@ -12,8 +13,8 @@ where
     let mut xh: Vec<u8> = Vec::with_capacity(32 * n);
 
     for leaf in x {
-        let hash = Sha256::digest(leaf);
-        xh.extend_from_slice(&hash);
+        let hash = blake3::hash(leaf.as_ref());
+        xh.extend_from_slice(hash.as_bytes());
     }
 
     xh
@@ -47,8 +48,8 @@ where
             combined.extend_from_slice(left_hash);
             combined.extend_from_slice(right_hash);
 
-            let hash = Sha256::digest(&combined);
-            next_layer.extend_from_slice(&hash);
+            let hash = blake3::hash(&combined);
+            next_layer.extend_from_slice(hash.as_bytes());
         }
 
         layers.push(next_layer.clone());
@@ -114,7 +115,7 @@ fn hash_siblings(left: &[u8], right: &[u8]) -> Vec<u8> {
     let mut combined = Vec::with_capacity(64);
     combined.extend_from_slice(left);
     combined.extend_from_slice(right);
-    Sha256::digest(&combined).to_vec()
+    blake3::hash(&combined).as_bytes().to_vec()
 }
 
 fn verify_ith_layer(
@@ -173,7 +174,7 @@ where
 {
     let mut layer: Vec<Vec<u8>> = leaves
         .iter()
-        .map(|leaf| Sha256::digest(leaf).to_vec())
+        .map(|leaf| blake3::hash(leaf.as_ref()).as_bytes().to_vec())
         .collect();
     let mut queries = leaf_indices.to_vec();
     let mut curr_cnt = queries.len();
