@@ -12,9 +12,13 @@ name = "cryptoutils"
 path = "src/main.rs"
 
 [dependencies]
+blake3 = "1.8.2"
 rand = "0.9.1"
 sha2 = "0.10.9"
 
 [dev-dependencies]
 paste = "1.0.15"
 rand = "0.9.1"
+
+[profile.release]
+debug = true
