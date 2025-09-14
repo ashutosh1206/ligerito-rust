@@ -1,12 +1,7 @@
-# Ligerito
+# Ligerito Rust implementation
 
-## Crypto Utils
+## Installation
 
-### Binary Fields
-
-- [x] add, div, mul, inverse, pow for `BinaryElem16`
-- [x] Write macros to extend the existing code to GF(2^32), GF(2^64), GF(2^128)
-- [x] Write tests for all operations
-- [ ] Benchmark all operations against CryptoUtilities.jl
-
-### Binary FFT
+- Make sure you're in the `feat/blake3-mtree` branch: `git checkout feat/blake3-mtree`
+- Build the code: `cargo build --release`
+- Run the code for 2^20 coefficient size, with release builds enabled: `cargo run --release`
