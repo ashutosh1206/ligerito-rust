@@ -7,7 +7,7 @@ Currently, the project mirrors Julia reference: https://github.com/bcc-research/
 ## Installation
 
 - Build the code: `cargo build --release`
-- Run the code for 2^20 coefficient size, with release builds enabled: `cargo run --release`
+- Run the code for polynomials of coefficient size $2^{20}$, with release builds enabled: `cargo run --release`
 
 > [!WARNING]
 > This is an academic prototype, and is NOT ready for production use.
