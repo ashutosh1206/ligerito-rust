@@ -4,7 +4,7 @@ use crate::emulated_fs::FS;
 use crate::ligerito::SumcheckVerifierInstance;
 use crate::merkle_tree::verify;
 use crate::sumcheck_polys::induce_sumcheck_poly;
-use crate::{MultiLinearPoly, eval_sk_at_vks, ligero_verify, sumcheck_verifier};
+use crate::{MultiLinearPoly, eval_sk_at_vks, ligero_verify};
 use std::ops::{Add, Mul};
 
 pub fn verifier<F>(config: VerifierConfig, proof: FinalizedLigeritoProof<F>) -> bool
@@ -33,7 +33,6 @@ where
         .map(|row| row.iter().flat_map(|elem| elem.to_bytes()).collect())
         .collect();
 
-    
     let is_valid = verify(
         &proof.initial_ligero_cm.root,
         &proof.initial_ligero_proof.merkle_proof,

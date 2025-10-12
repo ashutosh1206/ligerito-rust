@@ -21,7 +21,7 @@ fn format_bytes(bytes: usize) -> String {
 
 fn main() {
     let total_start = Instant::now();
-    // Same test as test_prove_verify_config_20 but as a binary
+    // Same test as test_prove_verify_config_20
     let poly: Vec<BinaryElem32> = (0..(1 << 20))
         .map(|_| BinaryElem32::new(rand::random()))
         .collect();

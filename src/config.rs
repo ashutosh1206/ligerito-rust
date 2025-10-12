@@ -127,11 +127,6 @@ mod tests {
     use crate::verifier::verifier;
 
     #[test]
-    fn test_ligerito_full() {
-        let config = hardcoded_config_20::<BinaryElem32>();
-    }
-
-    #[test]
     fn test_merkle_with_ligero_data() {
         use crate::binary_field::BinaryElem32;
         use crate::ligero::*;

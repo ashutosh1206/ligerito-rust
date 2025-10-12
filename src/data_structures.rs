@@ -1,6 +1,5 @@
 use crate::binary_field::BinaryField;
 use crate::reed_solomon::ReedSolomonEncoding;
-// use crate::
 use std::ops::{Add, Mul};
 
 pub trait ProofSize {
