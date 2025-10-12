@@ -1,8 +1,8 @@
 # Ligerito Rust implementation
 
-Pure Rust implementation of Ligerito: https://angeris.github.io/papers/ligerito.pdf
+Pure Rust implementation of [Ligerito](https://angeris.github.io/papers/ligerito.pdf).
 
-Currently, the project mirrors Julia reference: https://github.com/bcc-research/Ligerito.jl and contains other zk utilities from: https://github.com/bcc-research/ligerito-impl
+Currently, the project mirrors Julia [reference](https://github.com/bcc-research/Ligerito.jl) and contains other zk utilities from [Cryptoutilities.jl](https://github.com/bcc-research/ligerito-impl).
 
 ## Installation
 
