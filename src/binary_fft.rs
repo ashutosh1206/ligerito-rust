@@ -1,4 +1,4 @@
-use crate::binary_field::{BinaryElem16, BinaryElem32, BinaryField};
+use crate::binary_field::BinaryField;
 use std::ops::{Add, Mul};
 
 pub fn fft<F>(v: &mut [F], twiddles: &[F])

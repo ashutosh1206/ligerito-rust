@@ -20,7 +20,7 @@ where
     <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,
 {
     let mut fs = FS::new(1234);
-    let S = 148;
+    let s = 148;
 
     let wtns_0 = ligero_commit(
         &poly,
@@ -57,9 +57,8 @@ where
     fs.absorb(&cm_1.root);
     proof.recursive_commitments.push(cm_1);
 
-    let mut queries = fs.get_distinct_queries(wtns_0.num_rows, S);
+    let mut queries = fs.get_distinct_queries(wtns_0.num_rows, s);
     let alpha: F = fs.get_field();
-    
 
     let mut sks_vks = eval_sk_at_vks::<F>(1 << f.num_vars());
 
@@ -104,7 +103,7 @@ where
                 .collect();
             fs.absorb(&evals_u8);
 
-            queries = fs.get_distinct_queries(wtns_prev.num_rows, S);
+            queries = fs.get_distinct_queries(wtns_prev.num_rows, s);
             opened_rows = queries
                 .iter()
                 .map(|&q| {
@@ -148,7 +147,7 @@ where
         fs.absorb(&cm_next.root);
         proof.recursive_commitments.push(cm_next);
 
-        queries = fs.get_distinct_queries(wtns_prev.num_rows, S);
+        queries = fs.get_distinct_queries(wtns_prev.num_rows, s);
         let alpha: F = fs.get_field();
 
         sks_vks = eval_sk_at_vks::<F>(1 << sumcheck_prover.f.num_vars());
