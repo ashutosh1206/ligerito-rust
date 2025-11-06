@@ -14,7 +14,14 @@ use std::ops::{Add, Mul};
 
 pub fn prover<F>(config: ProverConfig<F>, poly: Vec<F>) -> FinalizedLigeritoProof<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize> + TryFrom<u128> + Copy + std::fmt::Debug,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
     <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,

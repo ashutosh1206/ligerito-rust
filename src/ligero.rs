@@ -30,7 +30,7 @@ fn encode_cols<F>(
     n: usize,
     rs: &ReedSolomonEncoding<F>,
 ) where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -73,7 +73,7 @@ pub fn ligero_commit<F>(
     rs: &ReedSolomonEncoding<F>,
 ) -> RecursiveLigeroWitness<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {

@@ -3,13 +3,14 @@ use std::ops::{Add, Mul};
 
 pub fn fft<F>(v: &mut [F], twiddles: &[F])
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     assert!(is_power_of_2(v.len()));
 
-    fft_twiddles(v, twiddles, Some(1));
+    // fft_twiddles(v, twiddles, Some(1));
+    fft_twiddles_parallel(v, twiddles, Some(1), None);
 }
 
 pub fn ifft<F>(v: &mut [F], twiddles: &[F])
@@ -100,6 +101,40 @@ where
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
     s_prev * s_prev + s_prev_at_root * s_prev
+}
+
+fn fft_twiddles_parallel<F>(
+    v: &mut [F],
+    twiddles: &[F],
+    idx: Option<usize>,
+    thread_depth: Option<usize>,
+) where
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
+    F::ValueType: TryFrom<usize>,
+    <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
+{
+    if v.len() == 1 {
+        return;
+    }
+    let idx = idx.unwrap_or_else(|| 1);
+
+    let thread_depth =
+        thread_depth.unwrap_or_else(|| rayon::current_num_threads().ilog2() as usize);
+
+    fft_mul(v, twiddles[idx - 1]);
+    let (u, w) = split_half(v);
+
+    if thread_depth > 0 {
+        // Parallel case
+        rayon::join(
+            || fft_twiddles_parallel(u, twiddles, Some(idx * 2), Some(thread_depth - 1)),
+            || fft_twiddles_parallel(w, twiddles, Some(idx * 2 + 1), Some(thread_depth - 1)),
+        );
+    } else {
+        // Serial case - fall back to regular fft_twiddles
+        fft_twiddles(u, twiddles, Some(idx * 2));
+        fft_twiddles(w, twiddles, Some(idx * 2 + 1));
+    }
 }
 
 fn fft_twiddles<F>(v: &mut [F], twiddles: &[F], idx: Option<usize>)

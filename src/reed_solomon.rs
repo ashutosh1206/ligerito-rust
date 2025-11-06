@@ -42,7 +42,7 @@ where
 
 impl<F> ReedSolomonEncoding<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
