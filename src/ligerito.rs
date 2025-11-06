@@ -12,7 +12,6 @@ where
 {
     pub f: MultiLinearPoly<F>,
     basis_polys: Vec<MultiLinearPoly<F>>,
-    pub sum: F,
     pub transcript: Vec<(F, F, F)>,
     to_be_glued: Option<MultiLinearPoly<F>>,
 }
@@ -34,7 +33,6 @@ where
             Self {
                 f,
                 basis_polys: vec![b1],
-                sum: h1,
                 transcript,
                 to_be_glued: None,
             },
