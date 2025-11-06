@@ -12,7 +12,6 @@ where
 {
     pub f: MultiLinearPoly<F>,
     basis_polys: Vec<MultiLinearPoly<F>>,
-    sum: F,
     pub transcript: Vec<(F, F, F)>,
     to_be_glued: Option<MultiLinearPoly<F>>,
 }
@@ -34,7 +33,6 @@ where
             Self {
                 f,
                 basis_polys: vec![b1],
-                sum: h1,
                 transcript,
                 to_be_glued: None,
             },
@@ -393,7 +391,7 @@ mod tests {
         let (mut verifier, g1) = SumcheckVerifierInstance::new(b1, h, prover.transcript.clone());
         fs_verifier.absorb(&g1);
 
-        for i in 0..(k - 1) {
+        for _ in 0..(k - 1) {
             let ri = fs_verifier.squeeze();
             verifier_challenges.push(ri);
             let gi = verifier.fold(ri);
@@ -793,9 +791,6 @@ mod tests {
 
     #[test]
     fn test_specific_failing_case() {
-        // Use the exact values from the failing test to debug
-        let k = 3;
-
         // Create specific polynomials with known values to trace the issue
         let f_evals = vec![
             BinaryElem16::new(1),

@@ -15,7 +15,7 @@ where
     <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,
 {
     let mut fs = FS::new(1234);
-    let S = 148;
+    let s = 148;
     let log_inv_rate = 2;
 
     fs.absorb(&proof.initial_ligero_cm.root);
@@ -24,7 +24,7 @@ where
     fs.absorb(&proof.recursive_commitments[0].root);
 
     let mut depth = config.initial_dim + log_inv_rate;
-    let mut queries = fs.get_distinct_queries(1 << depth, S);
+    let mut queries = fs.get_distinct_queries(1 << depth, s);
 
     let mut opened_rows_bytes: Vec<Vec<u8>> = proof
         .initial_ligero_proof
@@ -79,7 +79,7 @@ where
             fs.absorb(&yr_u8);
 
             depth = config.log_dims[i] + log_inv_rate;
-            queries = fs.get_distinct_queries(1 << depth, S);
+            queries = fs.get_distinct_queries(1 << depth, s);
             opened_rows_bytes = proof
                 .final_ligero_proof
                 .opened_rows
@@ -117,7 +117,7 @@ where
 
         depth = config.log_dims[i] + log_inv_rate;
         let liger_proof = &proof.recursive_proofs[i];
-        let queries = fs.get_distinct_queries(1 << depth, S);
+        let queries = fs.get_distinct_queries(1 << depth, s);
 
         let liger_opened_rows_bytes: Vec<Vec<u8>> = liger_proof
             .opened_rows

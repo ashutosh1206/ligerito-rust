@@ -147,7 +147,7 @@ mod tests {
 
         // Absorb some data
         fs.absorb(b"initial data");
-        let val1 = fs.squeeze();
+        fs.squeeze();
 
         // Absorb more data - should build on previous state
         fs.absorb(b"additional data");
