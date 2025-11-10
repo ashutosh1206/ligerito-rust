@@ -1,7 +1,7 @@
 use crate::binary_field::BinaryField;
 use std::ops::{Add, Mul};
 
-pub fn fft<F>(v: &mut [F], twiddles: &[F])
+pub fn fft<F>(v: &mut [F], twiddles: &[F], parallel: Option<bool>)
 where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
@@ -9,8 +9,11 @@ where
 {
     assert!(is_power_of_2(v.len()));
 
-    // fft_twiddles(v, twiddles, Some(1));
-    fft_twiddles_parallel(v, twiddles, Some(1), None);
+    if parallel.unwrap_or_else(|| false) {
+        fft_twiddles(v, twiddles, Some(1));
+    } else {
+        fft_twiddles_parallel(v, twiddles, Some(1), None);
+    }
 }
 
 pub fn ifft<F>(v: &mut [F], twiddles: &[F])
@@ -378,7 +381,7 @@ mod tests {
         );
 
         // Apply FFT
-        fft(&mut v, &twiddles);
+        fft(&mut v, &twiddles, None);
         println!(
             "After FFT: {:?}",
             v.iter().map(|x| x.value).collect::<Vec<_>>()

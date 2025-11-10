@@ -94,7 +94,9 @@ where
 
         let s_tw = self.short_from_long_twiddles();
         ifft(&mut message_coeffs[0..self.message_length()], &s_tw);
-        fft(&mut message_coeffs, &self.twiddles);
+
+        // Do not parallelize
+        fft(&mut message_coeffs, &self.twiddles, Some(false));
 
         message_coeffs
     }
@@ -106,7 +108,8 @@ where
             message[i] = message[i] * self.pis[i];
         }
 
-        fft(message, &self.twiddles);
+        // Do not parallelize
+        fft(message, &self.twiddles, Some(false));
     }
 }
 

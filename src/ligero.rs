@@ -4,6 +4,8 @@ use crate::data_structures::RecursiveLigeroWitness;
 use crate::merkle_tree::build_merkle_tree;
 use crate::reed_solomon::ReedSolomonEncoding;
 use crate::utils::evaluate_lagrange_basis;
+use rayon::iter::ParallelIterator;
+use rayon::prelude::ParallelSliceMut;
 use std::ops::{Add, Mul};
 
 fn poly2flatmat<F>(poly: &[F], m: usize, n: usize, inv_rate: usize) -> Vec<F>
@@ -24,19 +26,15 @@ where
     flat_mat
 }
 
-fn encode_cols<F>(
-    poly_flat_mat: &mut Vec<F>,
-    m_target: usize,
-    n: usize,
-    rs: &ReedSolomonEncoding<F>,
-) where
+fn encode_cols<F>(poly_flat_mat: &mut Vec<F>, m_target: usize, rs: &ReedSolomonEncoding<F>)
+where
     F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
-    for j in 0..n {
-        rs.encode_non_systematic(&mut poly_flat_mat[j * m_target..(j + 1) * m_target]);
-    }
+    poly_flat_mat.par_chunks_mut(m_target).for_each(|column| {
+        rs.encode_non_systematic(column);
+    });
 }
 
 pub fn extract_row<F: BinaryField + Copy>(
@@ -80,7 +78,7 @@ where
     let inv_rate = 4;
     let mut poly_flat_mat = poly2flatmat(poly, m, n, inv_rate);
     let m_target = m * inv_rate;
-    encode_cols(&mut poly_flat_mat, m_target, n, rs);
+    encode_cols(&mut poly_flat_mat, m_target, rs);
 
     let leaves = extract_leaves(&poly_flat_mat, m_target, n);
     let tree = build_merkle_tree(leaves);
