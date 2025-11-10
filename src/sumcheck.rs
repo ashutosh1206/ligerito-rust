@@ -95,7 +95,14 @@ where
 
 pub fn sumcheck_prover<F>(f: &MultiLinearPoly<F>, claimed_sum: F) -> (Vec<(F, F)>, Vec<F>)
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
     StandardUniform: Distribution<F::ValueType>,
@@ -128,7 +135,14 @@ pub fn sumcheck_verifier<F>(
     f: &MultiLinearPoly<F>,
 ) -> bool
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -147,7 +161,14 @@ pub fn double_sumcheck_prover<F>(
     gp: &MultiLinearPoly<F>,
 ) -> (Vec<(F, F, F)>, Vec<F>)
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
     StandardUniform: Distribution<F::ValueType>,
@@ -180,7 +201,14 @@ pub fn double_sumcheck_verifier<F>(
     gp: &MultiLinearPoly<F>,
 ) -> bool
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {

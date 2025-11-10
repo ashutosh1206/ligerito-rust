@@ -1,5 +1,6 @@
 use crate::binary_fft::is_power_of_2;
 use crate::binary_field::BinaryField;
+use rayon::prelude::*;
 use std::ops::{Add, Mul};
 
 #[derive(Debug, Clone)]
@@ -15,7 +16,7 @@ where
 
 impl<F> MultiLinearPoly<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -71,9 +72,13 @@ where
 
         for i in 1..rs.len() {
             n /= 2;
-            for j in 0..n {
-                partial_evals[j] = (one + rs[i]) * partial_evals[j] + rs[i] * partial_evals[j + n];
-            }
+
+            let (left, right) = partial_evals.split_at_mut(n);
+            left.par_iter_mut()
+                .zip(right.par_iter())
+                .for_each(|(l, r)| {
+                    *l = (one + rs[i]) * *l + rs[i] * *r;
+                });
         }
 
         MultiLinearPoly::new(partial_evals[0..n].to_vec())
@@ -82,7 +87,7 @@ where
 
 pub fn eval_013_product<F>(f: &MultiLinearPoly<F>, g: &MultiLinearPoly<F>) -> (F, F, F)
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F>,
+    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + Send + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {

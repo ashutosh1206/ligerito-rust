@@ -9,7 +9,14 @@ use std::ops::{Add, Mul};
 
 pub fn verifier<F>(config: VerifierConfig, proof: FinalizedLigeritoProof<F>) -> bool
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize> + TryFrom<u128> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
     <F::ValueType as TryFrom<u128>>::Error: std::fmt::Debug,
