@@ -4,7 +4,7 @@ use crate::data_structures::RecursiveLigeroWitness;
 use crate::merkle_tree::build_merkle_tree;
 use crate::reed_solomon::ReedSolomonEncoding;
 use crate::utils::evaluate_lagrange_basis;
-use rayon::iter::ParallelIterator;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::ParallelSliceMut;
 use std::ops::{Add, Mul};
 
@@ -50,16 +50,19 @@ pub fn extract_row<F: BinaryField + Copy>(
     row
 }
 
-fn extract_leaves<F: BinaryField + Copy>(
-    flat_mat: &[F],
-    m_target: usize,
-    n: usize,
-) -> Vec<Vec<u8>> {
+fn extract_leaves<F>(flat_mat: &[F], m_target: usize, n: usize) -> Vec<Vec<u8>>
+where
+    F: Copy + BinaryField + Send + Sync,
+{
     (0..m_target)
+        .into_par_iter()
         .map(|row_idx| {
-            let row = extract_row(flat_mat, row_idx, m_target, n);
-            // Serialize the row to bytes
-            row.iter().flat_map(|elem| elem.to_bytes()).collect()
+            let bytes_per_elem = std::mem::size_of::<F>();
+            let mut row_bytes = Vec::with_capacity(n * bytes_per_elem);
+            for j in 0..n {
+                row_bytes.extend_from_slice(&flat_mat[j * m_target + row_idx].to_bytes());
+            }
+            row_bytes
         })
         .collect()
 }
