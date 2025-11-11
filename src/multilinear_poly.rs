@@ -1,6 +1,8 @@
 use crate::binary_fft::is_power_of_2;
 use crate::binary_field::BinaryField;
-use rayon::prelude::*;
+use rayon::prelude::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 use std::ops::{Add, Mul};
 
 #[derive(Debug, Clone)]

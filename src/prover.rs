@@ -9,7 +9,7 @@ use crate::ligerito::SumcheckProverInstance;
 use crate::ligero::{extract_row, ligero_commit};
 use crate::merkle_tree::prove;
 use crate::multilinear_poly::MultiLinearPoly;
-use crate::sumcheck_polys::induce_sumcheck_poly;
+use crate::sumcheck_polys::induce_sumcheck_poly_parallel;
 use std::ops::{Add, Mul};
 
 pub fn prover<F>(config: ProverConfig<F>, poly: Vec<F>) -> FinalizedLigeritoProof<F>
@@ -75,7 +75,7 @@ where
         .collect();
     let mut mtree_proof = prove(&wtns_0.tree, &queries);
 
-    let (mut basis_poly, mut enforced_sum) = induce_sumcheck_poly(
+    let (mut basis_poly, mut enforced_sum) = induce_sumcheck_poly_parallel(
         f.num_vars(),
         &sks_vks,
         &opened_rows,
@@ -171,7 +171,7 @@ where
             .collect();
         mtree_proof = prove(&wtns_prev.tree, &queries);
 
-        (basis_poly, enforced_sum) = induce_sumcheck_poly(
+        (basis_poly, enforced_sum) = induce_sumcheck_poly_parallel(
             sumcheck_prover.f.num_vars(),
             &sks_vks,
             &opened_rows,

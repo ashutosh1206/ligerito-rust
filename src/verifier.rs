@@ -3,7 +3,7 @@ use crate::data_structures::{FinalizedLigeritoProof, VerifierConfig};
 use crate::emulated_fs::FS;
 use crate::ligerito::SumcheckVerifierInstance;
 use crate::merkle_tree::verify;
-use crate::sumcheck_polys::induce_sumcheck_poly;
+use crate::sumcheck_polys::induce_sumcheck_poly_parallel;
 use crate::{MultiLinearPoly, eval_sk_at_vks, ligero_verify};
 use std::ops::{Add, Mul};
 
@@ -51,7 +51,7 @@ where
 
     let alpha: F = fs.get_field();
     let mut sks_vks = eval_sk_at_vks::<F>(1 << config.initial_dim);
-    let (mut basis_poly, mut enforced_sum) = induce_sumcheck_poly(
+    let (mut basis_poly, mut enforced_sum) = induce_sumcheck_poly_parallel(
         config.initial_dim,
         &sks_vks,
         &proof.initial_ligero_proof.opened_rows,
@@ -145,7 +145,7 @@ where
 
         let alpha: F = fs.get_field();
         sks_vks = eval_sk_at_vks(1 << config.log_dims[i]);
-        (basis_poly, enforced_sum) = induce_sumcheck_poly(
+        (basis_poly, enforced_sum) = induce_sumcheck_poly_parallel(
             config.log_dims[i],
             &sks_vks,
             &liger_proof.opened_rows,
