@@ -5,7 +5,14 @@ use std::ops::{Add, Mul};
 
 pub fn hardcoded_config_20<F>() -> ProverConfig<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize> + TryFrom<u128> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -61,7 +68,14 @@ pub fn hardcoded_config_20_verifier() -> VerifierConfig {
 
 pub fn hardcoded_config_24<F>() -> ProverConfig<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize> + TryFrom<u128> + Copy,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {

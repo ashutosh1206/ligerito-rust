@@ -18,7 +18,14 @@ where
 
 impl<F> SumcheckProverInstance<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
@@ -151,7 +158,14 @@ where
 
 impl<F> SumcheckVerifierInstance<F>
 where
-    F: Copy + BinaryField + Add<Output = F> + Mul<Output = F> + PartialEq + std::fmt::Debug,
+    F: Copy
+        + BinaryField
+        + Add<Output = F>
+        + Mul<Output = F>
+        + PartialEq
+        + std::fmt::Debug
+        + Send
+        + Sync,
     F::ValueType: TryFrom<usize>,
     <F::ValueType as TryFrom<usize>>::Error: std::fmt::Debug,
 {
